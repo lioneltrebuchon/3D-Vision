@@ -3,3 +3,8 @@ http://cvg.ethz.ch/teaching/3dvision/2015/index.php  - 3D vision course
 http://cvg.ethz.ch/teaching/3dvision/projectSuggestions.php  - 3D vision groups
 http://ccwu.me/vsfm/install.html  -  instal vsfm
 
+https://github.com/luckybulldozer/VisualSFM_OS_X_Installer - How to install VisualSFM on a Mac
+
+http://www.10flow.com/2012/08/15/building-visualsfm-on-ubuntu-12-04-precise-pangolin-desktop-64-bit/ - How to install VisualSFM to Ubuntu, also lots of error situations explained in comments
+
+https://rasparchaeo.wordpress.com/2015/02/26/install-visualsfm-linux/ - another installation guide for VisualSFM on Ubuntu (without CUDA support)
