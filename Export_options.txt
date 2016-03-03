@@ -1,3 +1,4 @@
 Export options of VisualSFM software:
 
-- WUHUUU MY FIRST GITHUB PUSH/COMMIT :D
+- WUHUU MY FIRST GITHUB PUSH/COMMIT :D
+- Now lets try editing and adding something new to it and deleting something
