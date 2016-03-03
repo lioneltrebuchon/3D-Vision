@@ -1,4 +1,11 @@
 Export options of VisualSFM software:
 
-- WUHUU MY FIRST GITHUB PUSH/COMMIT :D
-- Now lets try editing and adding something new to it and deleting something
+- in ETH_example_3D_model there is an exported dense model you can open with VisualSFM called dense3.nvm. In VisualSFM you have to go to SfM->Load NView match
+- change between dense and sparse view -> use TAB key
+
+- another useful export is to use SfM->Pariwise Matching->Export F-Matrix Matches
+- it writes the coordinates of matched features between pairs of images. Downside is only that it does it between pairs of images. It doesnt show you directly the coordinates in all images where it appears.
+- example is in ETH_example_3D_model/matches_export.txt
+
+- another useful export is in ETH_example_3D_model/dense3.nvm.cmvs/00/models/option-0000.ply
+- This one lists all the dense points in 3D cloud with their coordinates and normal vectors
