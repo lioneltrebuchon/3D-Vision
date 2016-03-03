@@ -8,3 +8,5 @@ https://github.com/luckybulldozer/VisualSFM_OS_X_Installer - How to install Visu
 http://www.10flow.com/2012/08/15/building-visualsfm-on-ubuntu-12-04-precise-pangolin-desktop-64-bit/ - How to install VisualSFM to Ubuntu, also lots of error situations explained in comments
 
 https://rasparchaeo.wordpress.com/2015/02/26/install-visualsfm-linux/ - another installation guide for VisualSFM on Ubuntu (without CUDA support)
+
+Normal vector search: http://www.mathworks.com/matlabcentral/fileexchange/48111-find-3d-normals-and-curvature

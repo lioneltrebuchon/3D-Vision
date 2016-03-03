@@ -8,4 +8,7 @@ Export options of VisualSFM software:
 - example is in ETH_example_3D_model/matches_export.txt
 
 - another useful export is in ETH_example_3D_model/dense3.nvm.cmvs/00/models/option-0000.ply
-- This one lists all the dense points in 3D cloud with their coordinates and normal vectors
+- This one lists all the DENSE points in 3D cloud with their coordinates and normal vectors
+- dense list is huge, because dense tries to match every pixel to the model
+
+- if you want a sparse 3D point cloud list (shorter), open the ETH_example_3D_model/dense3.nvm. This one includes a list of coordinates of all images where each feature appears.
