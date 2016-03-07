@@ -1,10 +1,16 @@
 How to use the repository with gitbash
-Locally, right click, "Git bash here". Now type:
-git init
-git add .
+Locally, right click, "Git bash here". STARTS TERMINAL
+Now type:
+% git init
+OUTSIDE THE TERMINAL edit your code locally, paste in unicorn pictures, whatever
+BACK IN THE TERMINAL
+git add .  % means adding ALL your changes 
 git commit -m "I changed this and this"
-git remote add origin https://github.com/lioneltrebuchon/semester_project
+% git remote add origin https://github.com/lioneltrebuchon/3D-Vision
 git push origin master
 <input your github username, ENTER, password, ENTER>
-Hi
-Sonali
+
+Hi from Sonali
+
+Futher info:
+Tian added a .gitignore to impede from pushing useless .* files
