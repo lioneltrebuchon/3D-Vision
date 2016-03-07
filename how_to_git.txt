@@ -6,3 +6,5 @@ git commit -m "I changed this and this"
 git remote add origin https://github.com/lioneltrebuchon/semester_project
 git push origin master
 <input your github username, ENTER, password, ENTER>
+Hi
+Sonali
