@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <sys/stat.h> 
 #include <fstream> 
-// #include "sift.h"
 
 enum
 {
@@ -13,8 +12,6 @@ enum
     SIFT_NAME= ('S'+ ('I'<<8)+('F'<<16)+('T'<<24)),
     MSER_NAME= ('M'+ ('S'<<8)+('E'<<16)+('R'<<24)),
     RECT_NAME= ('R'+ ('E'<<8)+('C'<<16)+('T'<<24)), 
-    //SIFT_VERSION_2=('V'+('2'<<8)+('.'<<16)+('0'<<24)),
-    //SIFT_VERSION_3=('V'+('3'<<8)+('.'<<16)+('0'<<24)),
     SIFT_VERSION_4=('V'+('4'<<8)+('.'<<16)+('0'<<24)),
     SIFT_VERSION_5=('V'+('5'<<8)+('.'<<16)+('0'<<24)),
     SIFT_EOF = (0xff+('E'<<8)+('O'<<16)+('F'<<24)),
