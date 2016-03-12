@@ -5,11 +5,33 @@
 #include <fcntl.h>
 #include <sys/stat.h> 
 #include <fstream> 
-#include "sift.h"
+// #include "sift.h"
+
+enum
+{
+//      READ_BUFFER_SIZE = 0x100000,
+    SIFT_NAME= ('S'+ ('I'<<8)+('F'<<16)+('T'<<24)),
+    MSER_NAME= ('M'+ ('S'<<8)+('E'<<16)+('R'<<24)),
+    RECT_NAME= ('R'+ ('E'<<8)+('C'<<16)+('T'<<24)), 
+    //SIFT_VERSION_2=('V'+('2'<<8)+('.'<<16)+('0'<<24)),
+    //SIFT_VERSION_3=('V'+('3'<<8)+('.'<<16)+('0'<<24)),
+    SIFT_VERSION_4=('V'+('4'<<8)+('.'<<16)+('0'<<24)),
+    SIFT_VERSION_5=('V'+('5'<<8)+('.'<<16)+('0'<<24)),
+    SIFT_EOF = (0xff+('E'<<8)+('O'<<16)+('F'<<24)),
+};
+
+static inline int IsValidVersionName(int value)
+{
+    return value == SIFT_VERSION_4 || value == SIFT_VERSION_5;
+}
+
+static inline int IsValidFeatureName(int value)
+{
+    return value == SIFT_NAME || value == MSER_NAME;
+}
 
 static void printSift(float *data,char *descData, int nLocDim, int nDesDim, int nPoints){
     for (int i = 0; i < nPoints; i++){
-       // print(_locData[i])
         std::cout << "Feature " << i << ": ";
         for (int j = 0; j < nLocDim; j++){
             std::cout << data[i*nLocDim + j];
@@ -68,22 +90,16 @@ int main(int argc, char* argv[]){
         fs.read((char *) &nLocDim, sizeof(int));
         fs.read((char *) &nDesDim, sizeof(int));
         if(npoint>0 && nLocDim >0 && nDesDim==128) {
-            ResizeFeatureData(npoint,nLocDim,nDesDim);
             float *data = new float [nDesDim*npoint];
             char *descData = new char [nDesDim*npoint];
             
             fs.read((char *)data, nLocDim *npoint*sizeof(float));
-            
-
-            // fs.read((char *) _desData->data(), nDesDim*npoint*sizeof(unsigned char));
             fs.read((char *) descData, nDesDim*npoint*sizeof(unsigned char));
-           printSift(data, descData, nLocDim, nDesDim, npoint);
+            printSift(data, descData, nLocDim, nDesDim, npoint);
+
             fs.read((char *) &sift_eof,sizeof(int));
             fs.close();
-            _locData->_file_version = version;
-            SetUpdated();
         }else {
-            ResizeFeatureData(0, 0, 0);
             fs.close();
             return 0;
         }
