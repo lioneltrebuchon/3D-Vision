@@ -56,6 +56,7 @@ class DescriptorData: public Points<DTYPE>
 public:
     DescriptorData(DescriptorData& sup, int index[], int n): Points<DTYPE>(sup,index,n){};
     DescriptorData(int d, int n):Points<DTYPE>(d,n){};
+    
 };
 static float gSiftDisplayScale;
 static int   gSiftVisualStyle;

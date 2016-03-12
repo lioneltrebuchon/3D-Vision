@@ -1,12 +1,49 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <iostream>
 #include <fcntl.h>
 #include <sys/stat.h> 
 #include <fstream> 
 #include "sift.h"
 
+static void printSift(float *data,char *descData, int nLocDim, int nDesDim, int nPoints){
+    for (int i = 0; i < nPoints; i++){
+       // print(_locData[i])
+        std::cout << "Feature " << i << ": ";
+        for (int j = 0; j < nLocDim; j++){
+            std::cout << data[i*nLocDim + j];
+            std::cout << " ";
+        }
+        std::cout << "\n\n";
+        if (nDesDim == 128) {
+            for (int a = 0; a < 4; a++){
+                for (int b = 0; b < 4; b++){
+                    for (int c =0; c < 8; c++){
+                        std::cout << (int)(uint32_t)(uint8_t) descData[i*nDesDim + a*4 + b*8 + c];
+                        std::cout << " ";
+                    }
+                    std::cout << "\n";
+                }
+                std::cout << "\n\n";
+            }
+            std::cout << "--------------------------\n";
+        } else {
+            for (int j = 0; j < nDesDim; j++){
+                std::cout << (int)(uint32_t)(uint8_t) descData[i*nDesDim + j];
+                std::cout << " ";
+            }
+            std::cout << "\n";
+        }
+    }
+}
 
+
+// To use this function: 
+// Compile using: g++ sift.cpp
+// Run with: ./a.out name_of_sift_file.sift
+// When run, will print out Sift features with first row containing (x,y,z,scale,orientation) 
+// The following will be 4 sets of 8x4 values representing each component of the sift descriptor
 int main(int argc, char* argv[]){
     if (argc != 2) {
         std::cout << "Please give a filename! \n";
@@ -32,8 +69,15 @@ int main(int argc, char* argv[]){
         fs.read((char *) &nDesDim, sizeof(int));
         if(npoint>0 && nLocDim >0 && nDesDim==128) {
             ResizeFeatureData(npoint,nLocDim,nDesDim);
-            fs.read((char *) _locData->data(), nLocDim *npoint*sizeof(float));
-            fs.read((char *) _desData->data(), nDesDim*npoint*sizeof(unsigned char));
+            float *data = new float [nDesDim*npoint];
+            char *descData = new char [nDesDim*npoint];
+            
+            fs.read((char *)data, nLocDim *npoint*sizeof(float));
+            
+
+            // fs.read((char *) _desData->data(), nDesDim*npoint*sizeof(unsigned char));
+            fs.read((char *) descData, nDesDim*npoint*sizeof(unsigned char));
+           printSift(data, descData, nLocDim, nDesDim, npoint);
             fs.read((char *) &sift_eof,sizeof(int));
             fs.close();
             _locData->_file_version = version;
@@ -43,7 +87,7 @@ int main(int argc, char* argv[]){
             fs.close();
             return 0;
         }
-        std::cout << _locData;
+        std::cout << npoint << " " << nLocDim << " " << nDesDim;
         return 1;
     }else {
         fs.close();
