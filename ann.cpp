@@ -58,15 +58,31 @@ int				maxPts			= 1000;			// maximum number of data points
 
 istream*		dataIn			= NULL;			// input for data points
 istream*		queryIn			= NULL;			// input for query points
+char			line[1028];
 
 bool readPt(istream &in, ANNpoint p)			// read point (false on EOF)
 {
-	char line[1028];
 	int check = in.getline(line, 1028);
 	if (!check) {
 		return false;
 	}
 	istringstream ss(line);
+	for (int i = 0; i < dim; i++){
+		if (!(ss >> p[i])){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool readNormals(ANNpoint p)
+{
+	istringstream ss(line);
+	for (int i = 0; i < dim; i++){
+		if (!(ss >> p[0])){
+			return false;
+		}
+	}
 	for (int i = 0; i < dim; i++){
 		if (!(ss >> p[i])){
 			return false;
@@ -88,6 +104,7 @@ int main(int argc, char **argv)
 {
 	int					nPts;					// actual number of data points
 	ANNpointArray		dataPts;				// data points
+	ANNpointArray		normalPts;				// normal points
 	ANNpoint			queryPt;				// query point
 	ANNidxArray			nnIdx;					// near neighbor indices
 	ANNdistArray		dists;					// near neighbor distances
@@ -97,6 +114,7 @@ int main(int argc, char **argv)
 
 	queryPt = annAllocPt(dim);					// allocate query point
 	dataPts = annAllocPts(maxPts, dim);			// allocate data points
+	normalPts = annAllocPts(maxPts, dim);		// allocate normal points
 	nnIdx = new ANNidx[k];						// allocate near neigh indices
 	dists = new ANNdist[k];						// allocate near neighbor dists
 
@@ -104,7 +122,9 @@ int main(int argc, char **argv)
 
 	cout << "Data Points:\n";
 	while (nPts < maxPts && readPt(*dataIn, dataPts[nPts])) {
+		readNormals(normalPts[nPts]);
 		printPt(cout, dataPts[nPts]);
+		printPt(cout, normalPts[nPts]);
 		nPts++;
 	}
 
