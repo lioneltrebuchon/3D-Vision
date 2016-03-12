@@ -20,9 +20,9 @@
 
 #include <cstdlib>						// C standard library
 #include <cstdio>						// C I/O (for sscanf)
-#include <cstring>						// string manipulation
-#include <fstream>						// file I/O
-#include <ANN/ANN.h>					// ANN declarations
+#include <cstring>						// string manipulation	
+#include <fstream>					// file I/O
+#include <ANN/ANN.h>				// ANN declarations
 #include <sstream> 
 
 using namespace std;					// make std:: accessible
@@ -62,8 +62,9 @@ char			line[1028];
 
 bool readPt(istream &in, ANNpoint p)			// read point (false on EOF)
 {
-	int check = in.getline(line, 1028);
-	if (!check) {
+	char line[1028];
+	std::streamsize n=1028;  // for 
+	if (!in.getline(line,n,'\n')) {
 		return false;
 	}
 	istringstream ss(line);
