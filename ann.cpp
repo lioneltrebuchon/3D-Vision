@@ -62,7 +62,6 @@ char			line[1028];
 
 bool readPt(istream &in, ANNpoint p)			// read point (false on EOF)
 {
-	char line[1028];
 	std::streamsize n=1028;  // for 
 	if (!in.getline(line,n,'\n')) {
 		return false;
