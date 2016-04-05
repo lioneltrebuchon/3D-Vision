@@ -11,11 +11,11 @@
 #include <ANN/ANN.h>                    // ANN declarations
 #include <sstream> 
 #include <vector>
-#define cimg_display 0
-#include "CImg.h"
+// #define cimg_display 0
+// #include "CImg.h"
 
 using namespace std;
-using namespace cimg_library;
+// using namespace cimg_library;
 
 class SiftFeature
 {
@@ -23,6 +23,7 @@ public:
     float point[3];
     float size;
     float orientation;
+    char description[128];
     int cameraIndex;
 };
 
@@ -75,8 +76,8 @@ static inline int IsValidFeatureName(int value)
 }
 
 vector<SiftFeature> readSIFT(string filename, int index);
-void computeTranslation(Camera c, sparseSiftFeature *s);
-void computeRotation(Camera c, sparseSiftFeature *s);
+void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
+void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(sparseSiftFeature *s, double normal[3]);
 void createVIP(string imageName, sparseSiftFeature *s);
 
@@ -87,7 +88,7 @@ void createVIP(string imageName, sparseSiftFeature *s);
 *       -df: path to dense file
 *       -sf: path to sparse file
 *       -sift: path to folder containing images and SIFT files
-*              that generated the model. (Plz no '\' at end of path)
+*              that generated the model. (Plz no '/' at end of path)
 *******************************/
 int main(int argc, char **argv)
 {
@@ -219,7 +220,8 @@ int main(int argc, char **argv)
         ss >> ns;
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
-        cout << numSift << "\n";
+        cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): ";
+        cout << numSift << " SIFT features\n";
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
             ss >> ns;
@@ -236,10 +238,9 @@ int main(int argc, char **argv)
             **/
             ss >> ssf.modelXY[0];
             ss >> ssf.modelXY[1];
-            cout << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << "\n";
-            cout << ssf.modelXY[0] << "," << ssf.modelXY[1] << "\n";
-            computeTranslation(cam, &ssf);
-            computeRotation(cam, &ssf);
+            cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n";
+            computeTranslation(cam, &ssf, smp);
+            computeRotation(cam, &ssf, smp);
             computeHomography(&ssf, smp.normal);
             // a P becomes a VIP
             createVIP(siftFolder + "/" + cam.name, &ssf);
@@ -277,11 +278,14 @@ vector<SiftFeature> readSIFT(string file_name, int index){
         fs.read((char *) &nDesDim, sizeof(int));
         vector<SiftFeature> features(npoint);
         if(npoint>0 && nLocDim >0) {
-            float *data = new float [nDesDim*npoint];
+            float *data = new float [nLocDim*npoint];
             char *descData = new char [nDesDim*npoint];
             
             fs.read((char *)data, nLocDim *npoint*sizeof(float));
+
+            // Don't actually need the description here
             // fs.read((char *) descData, nDesDim*npoint*sizeof(unsigned char));
+
             // Here, we iterate through all SIFT features and add them to 
             // the feature vector
             for (int i = 0; i < npoint; i++){
@@ -291,6 +295,7 @@ vector<SiftFeature> readSIFT(string file_name, int index){
                 }
                 s.size = data[i*nLocDim + 3];
                 s.orientation = data[i*nLocDim + 4];
+                // s.description = &descData[i*nDesDim];
                 s.cameraIndex = index;
                 features[i] = s;
             }
@@ -310,10 +315,10 @@ vector<SiftFeature> readSIFT(string file_name, int index){
 }
 
 // TODO: I can't math D:
-void computeTranslation(Camera c, sparseSiftFeature *s){
+void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 }
 
-void computeRotation(Camera c, sparseSiftFeature *s){
+void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 }
 
 void computeHomography(sparseSiftFeature *s, double normal[3]){
@@ -335,15 +340,19 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
 void createVIP(string imageName, sparseSiftFeature *s){
     // The homography warping can be done with OpenCV. 
     // Do we want to try that?
-    CImg<unsigned char> image("imageName");
-    int w = image.width()-1;
-    int h = image.height()-1;
-    double a, b, c;
+    // CImg<unsigned char> image((char*)imageName.c_str());
+    // int w = image.width()-1;
+    // int h = image.height()-1;
+
+    //placeholder width and height for now
+    int w = 3120;
+    int h = 4160;
 
     // Find the corners of the warped image
     // Right now, warping the entire image. Might be more efficient to just
     // warp the SIFT patch.
     // Also, assumes the homography transforms from camera to normal (easily reversed)
+    double a, b, c;
     double tl[2], tr[2], bl[2], br[2];
     a = s->H[0][0] + s->H[0][1] + s->H[0][2];
     b = s->H[1][0] + s->H[1][1] + s->H[1][2];
