@@ -11,6 +11,7 @@
 #include <ANN/ANN.h>                    // ANN declarations
 #include <sstream> 
 #include <vector>
+#include <math.h>  
 // #define cimg_display 0
 // #include "CImg.h"
 
@@ -314,10 +315,23 @@ vector<SiftFeature> readSIFT(string file_name, int index){
     }
 }
 
-// TODO: I can't math D:
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
+    // Not sure if doing this right, but essentially making the centre of the normal
+    // plane a distance of focalLength away from the 3D point
+    // Treating the centre of the camera as the centre of the SIFT feature. So when warping,
+    // may need to crop and centre the SIFT feature first
+    // Vector is from normal plane to camera plane. Easily reversed
+    double scaledNormal[3];
+    double normalPoint[3];
+    double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
+    for (int i = 0; i < 3; i++){
+        scaledNormal[i] = (smp.normal[0]/length)*c.focalLength;
+        normalPoint[i] = smp.point[i] + scaledNormal[i];
+        s->translation[i] = c.center[i] - normalPoint[i];
+    } 
 }
 
+// TODO: I can't math D:
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 }
 
@@ -337,6 +351,7 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
     }
 }
 
+// TODO: Figure out a way to read images into C++
 void createVIP(string imageName, sparseSiftFeature *s){
     // The homography warping can be done with OpenCV. 
     // Do we want to try that?
@@ -344,13 +359,13 @@ void createVIP(string imageName, sparseSiftFeature *s){
     // int w = image.width()-1;
     // int h = image.height()-1;
 
-    //placeholder width and height for now
-    int w = 3120;
-    int h = 4160;
+
+    // Treating the size of the patch as 10*size of sift feature
+    int w = s.Sift.size*10;
+    int h = w;
+     // TODO: Crop out the SIFT feature to be warped
 
     // Find the corners of the warped image
-    // Right now, warping the entire image. Might be more efficient to just
-    // warp the SIFT patch.
     // Also, assumes the homography transforms from camera to normal (easily reversed)
     double a, b, c;
     double tl[2], tr[2], bl[2], br[2];
