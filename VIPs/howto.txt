@@ -1,0 +1,1 @@
+g++ warpSIFT.cpp -I/Users/tian/Documents/CMU/Spring_16/3DV/ann_1.1.2/include -L/Users/tian/Documents/CMU/Spring_16/3DV/ann_1.1.2/lib -lANN -g
