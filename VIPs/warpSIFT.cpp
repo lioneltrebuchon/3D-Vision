@@ -12,11 +12,10 @@
 #include <sstream> 
 #include <vector>
 #include <math.h>  
-// #define cimg_display 0
-// #include "CImg.h"
+#include <opencv2/opencv.hpp>
 
 using namespace std;
-// using namespace cimg_library;
+using namespace cv;
 
 class SiftFeature
 {
@@ -80,11 +79,16 @@ vector<SiftFeature> readSIFT(string filename, int index);
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(sparseSiftFeature *s, double normal[3]);
-void createVIP(string imageName, sparseSiftFeature *s);
+void createVIP(string imageName, sparseSiftFeature *s, string patchName);
 
 /******************************
 * I am a file that sets up models/features for creating Viewpoint Invariant Patches
 * If you don't compile me with the ann library I will be sad :( (See ann user guide)
+* Also needs to be compiled with OpenCV now
+
+Command: (Probably don't need all the OpenCV libraries listed)
+g++ warpSIFT.cpp -I/path/to/ann_1.1.2/include -L/path/to/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core
+
 * Must be given 3 flags:
 *       -df: path to dense file
 *       -sf: path to sparse file
@@ -244,7 +248,7 @@ int main(int argc, char **argv)
             computeRotation(cam, &ssf, smp);
             computeHomography(&ssf, smp.normal);
             // a P becomes a VIP
-            createVIP(siftFolder + "/" + cam.name, &ssf);
+            createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j)+".jpg");
             sparseSifts[j] = ssf;
         }
         smp.features = sparseSifts;
@@ -333,6 +337,23 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 
 // TODO: I can't math D:
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
+    // Turning quaternion to rotation matrix: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+    double to_camera[3][3];
+    double w = c.quaternion[0];
+    double x = c.quaternion[1];
+    double y = c.quaternion[2];
+    double z = c.quaternion[3];
+    to_camera[0][0] = 1 - 2*y*y - 2*z*z;
+    to_camera[0][1] = 2*x*y - 2*z*w;
+    to_camera[0][2] = 2*x*z + 2*y*w;
+    to_camera[1][0] = 2*x*y + 2*z*w;
+    to_camera[1][1] = 1 - 2*x*x - 2*z*z;
+    to_camera[1][2] = 2*y*z - 2*x*w;
+    to_camera[2][0] = 2*x*z - 2*y*w;
+    to_camera[2][1] = 2*y*z + 2*x*w;
+    to_camera[2][2] = 1 - 2*x*x - 2*y*y;
+
+
 }
 
 void computeHomography(sparseSiftFeature *s, double normal[3]){
@@ -352,38 +373,35 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
 }
 
 // TODO: Figure out a way to read images into C++
-void createVIP(string imageName, sparseSiftFeature *s){
-    // The homography warping can be done with OpenCV. 
-    // Do we want to try that?
-    // CImg<unsigned char> image((char*)imageName.c_str());
-    // int w = image.width()-1;
-    // int h = image.height()-1;
-
-
+void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
-    int w = s.Sift.size*10;
-    int h = w;
-     // TODO: Crop out the SIFT feature to be warped
+    int size = s->Sift.size*20;
+    Mat image, cropped;
+    // Read the image
+    image = imread(imageName, CV_LOAD_IMAGE_COLOR);
+    // Crop the image to the SIFT patch
+    int w = image.cols;
+    int h = image.rows;
+    int x = s->Sift.point[0] - size/2;
+    int y = h - s->Sift.point[1] - 1 - size/2;
+    if (x < 1) {
+        x = 1;
+    }
+    if (x+size >= w) {
+        x = w - size - 1;
+    }
+    if (y < 1) {
+        y = 1;
+    }
+    if (y+size >= h) {
+        y = h - size - 1;
+    }
+    cropped = image(Rect(x, y, size, size));
+    // imwrite(patchName, cropped); // Image patches look kinda sorta right :/
 
-    // Find the corners of the warped image
-    // Also, assumes the homography transforms from camera to normal (easily reversed)
-    double a, b, c;
-    double tl[2], tr[2], bl[2], br[2];
-    a = s->H[0][0] + s->H[0][1] + s->H[0][2];
-    b = s->H[1][0] + s->H[1][1] + s->H[1][2];
-    c = s->H[3][0] + s->H[3][1] + s->H[3][2];
-    tl[0] = a/c; tl[1] = b/c;
-    a = s->H[0][0]*w + s->H[0][1] + s->H[0][2];
-    b = s->H[1][0]*w + s->H[1][1] + s->H[1][2];
-    c = s->H[3][0]*w + s->H[3][1] + s->H[3][2];
-    tr[0] = a/c; tr[1] = b/c;
-    a = s->H[0][0] + s->H[0][1]*h + s->H[0][2];
-    b = s->H[1][0] + s->H[1][1]*h + s->H[1][2];
-    c = s->H[3][0] + s->H[3][1]*h + s->H[3][2];
-    bl[0] = a/c; bl[1] = b/c;
-    a = s->H[0][0]*w + s->H[0][1]*h + s->H[0][2];
-    b = s->H[1][0]*w + s->H[1][1]*h + s->H[1][2];
-    c = s->H[3][0]*w + s->H[3][1]*h + s->H[3][2];
-    br[0] = a/c; br[1] = b/c;
-    // TODO: Finish the warp. More math T_T
+    // Warp the image
+    Mat H = Mat(3,3,CV_32FC1,s->H);
+    Mat warp = cropped.clone();
+    warpPerspective(cropped, warp, H, warp.size());
+    imwrite(patchName, warp);
 }
