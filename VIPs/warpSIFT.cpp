@@ -80,13 +80,14 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(sparseSiftFeature *s, double normal[3]);
 void createVIP(string imageName, sparseSiftFeature *s, string patchName);
+Mat MakeRotationMatrix(sparseModelPoint smp);  
 
 /******************************
 * I am a file that sets up models/features for creating Viewpoint Invariant Patches
 * If you don't compile me with the ann library I will be sad :( (See ann user guide)
 * Also needs to be compiled with OpenCV now
 
-Command: (Probably don't need all the OpenCV libraries listed)
+Compile command: (Probably don't need all the OpenCV libraries listed here)
 g++ warpSIFT.cpp -I/path/to/ann_1.1.2/include -L/path/to/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core
 
 * Must be given 3 flags:
@@ -215,7 +216,7 @@ int main(int argc, char **argv)
         }
         kdTree->annkSearch(queryPt, k, nnIdx, dists, eps);   
         for (int j = 0; j < 3; j++){
-            smp.normal[j] = normals[nnIdx[0]][j];
+            smp.normal[j] = normals[nnIdx[0]][j]; 
         }
 
         int temp;
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
         ss >> ns;
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
-        cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): ";
+        cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
         cout << numSift << " SIFT features\n";
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
@@ -252,8 +253,8 @@ int main(int argc, char **argv)
             // smp: sparse model point
             cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n";
             computeTranslation(cam, &ssf, smp);
-            computeRotation(cam, &ssf, smp);
             computeHomography(&ssf, smp.normal);
+            computeRotation(cam, &ssf, smp);
             // a P becomes a VIP
             createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j)+".jpg");
             sparseSifts[j] = ssf;
@@ -334,11 +335,17 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Vector is from normal plane to camera plane. Easily reversed
     double scaledNormal[3];
     double normalPoint[3];
-    double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
+    double distance[3];
     for (int i = 0; i < 3; i++){
-        scaledNormal[i] = (smp.normal[0]/length)*c.focalLength;
+        distance[i] = c.center[i] - smp.point[i];
+    }
+    double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
+    double dist = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
+    for (int i = 0; i < 3; i++){
+        scaledNormal[i] = (smp.normal[0]/length)*dist;
         normalPoint[i] = smp.point[i] + scaledNormal[i];
         s->translation[i] = c.center[i] - normalPoint[i];
+
     } 
 }
 
@@ -351,6 +358,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     double x = c.quaternion[1];
     double y = c.quaternion[2];
     double z = c.quaternion[3];
+    cout << "Quaternion: " << w << " " << x << " " << y << " " << z << "\n";
     to_camera[0][0] = 1 - 2*y*y - 2*z*z;
     to_camera[0][1] = 2*x*y - 2*z*w;
     to_camera[0][2] = 2*x*z + 2*y*w;
@@ -361,7 +369,16 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     to_camera[2][1] = 2*y*z + 2*x*w;
     to_camera[2][2] = 1 - 2*x*x - 2*y*y;
 
+    Mat XY_to_camera = Mat(3,3,CV_64FC1,to_camera);
+    Mat Normal_to_XY = MakeRotationMatrix(smp);
+    Mat rot = Normal_to_XY*XY_to_camera;
 
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++){
+            s->rotation[i][j] = rot.at<double>(i,j);
+        }
+    }
+    
 }
 
 void computeHomography(sparseSiftFeature *s, double normal[3]){
@@ -380,10 +397,9 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
     }
 }
 
-// TODO: Figure out a way to read images into C++
 void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
-    int size = s->Sift.size*20;
+    int size = s->Sift.size*50;
     Mat image, cropped;
     // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
@@ -392,24 +408,54 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     int h = image.rows;
     int x = s->Sift.point[0] - size/2;
     int y = h - s->Sift.point[1] - 1 - size/2;
-    if (x < 1) {
-        x = 1;
+    if (x < 0) {
+        x = 0;
     }
     if (x+size >= w) {
         x = w - size - 1;
     }
-    if (y < 1) {
-        y = 1;
+    if (x < 0) {
+        x = 0;
+        size = w-1;
+    }
+    if (y < 0) {
+        y = 0;
     }
     if (y+size >= h) {
         y = h - size - 1;
+    }
+    if (y < 0) {
+        y = 0;
     }
     cropped = image(Rect(x, y, size, size));
     // imwrite(patchName, cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
-    Mat H = Mat(3,3,CV_32FC1,s->H);
+    Mat H = Mat(3,3,CV_64FC1,s->H).inv();
     Mat warp = cropped.clone();
     warpPerspective(cropped, warp, H, warp.size());
     imwrite(patchName, warp);
 }
+
+Mat MakeRotationMatrix(sparseModelPoint smp) {
+    cout << "Normal (" << smp.normal[0] << "," << smp.normal[1] << "," << smp.normal[2] << "): \n";
+        
+    Mat rotMatrix = Mat::zeros(3,3,CV_64FC1);
+
+    Mat X = Mat(3,1,CV_64FC1,smp.normal);
+    Mat Y = Mat::zeros(3,1,CV_64FC1);
+    Y.col(0).row(2) = 1;
+    rotMatrix.col(0) = (X.col(0) + 0);
+    
+    rotMatrix.col(2) = X.cross(Y)/norm(X.cross(Y));
+
+    rotMatrix.col(1) = rotMatrix.col(2).cross(X)/norm(rotMatrix.col(2).cross(X));
+    return rotMatrix;
+
+}
+
+
+
+
+
+
