@@ -53,12 +53,14 @@ void getArgs(int argc, char **argv);			// get command-line arguments
 
 int				k				= 1;			// number of nearest neighbors
 int				dim				= 2;			// dimension
+												// ?? Why is dimension defined here?
 double			eps				= 0;			// error bound
 int				maxPts			= 1000;			// maximum number of data points
 
 istream*		dataIn			= NULL;			// input for data points
 istream*		queryIn			= NULL;			// input for query points
-char			line[1028];
+char			line[1028];						// Broccoli: bad coding practice 
+												// (adding global char)
 
 bool readPt(istream &in, ANNpoint p)			// read point (false on EOF)
 {
@@ -66,10 +68,10 @@ bool readPt(istream &in, ANNpoint p)			// read point (false on EOF)
 	if (!in.getline(line,n,'\n')) {
 		return false;
 	}
-	istringstream ss(line);
+	istringstream ss(line);						// create stringstream (needs sstream)
 	for (int i = 0; i < dim; i++){
-		if (!(ss >> p[i])){
-			return false;
+		if (!(ss >> p[i])){						// fill array
+			return false; 
 		}
 	}
 	return true;
@@ -127,22 +129,29 @@ int main(int argc, char **argv)
 		printPt(cout, normalPts[nPts]);
 		nPts++;
 	}
+	normalPts >> normalPts.csv;					// broccoli: print out into .csv
 
+												// previous guys: efficiency booster
 	kdTree = new ANNkd_tree(					// build search structure
 					dataPts,					// the data points
 					nPts,						// number of points
 					dim);						// dimension of space
 
+	std::ofstream queryPts;						// broccoli: find queryPts
+	outfile.
 	while (readPt(*queryIn, queryPt)) {			// read query points
 		cout << "Query point: ";				// echo query point
 		printPt(cout, queryPt);
-
+		<<queryPt;
 		kdTree->annkSearch(						// search
 				queryPt,						// query point
 				k,								// number of near neighbors
 				nnIdx,							// nearest neighbors (returned)
 				dists,							// distance (returned)
 				eps);							// error bound
+		normalPts[nnIdx] >> compPts				// comparison points
+		queryPts[nnIdx] >> compQs
+
 
 		cout << "\tNN:\tIndex\tDistance\n";
 		for (int i = 0; i < k; i++) {			// print summary
