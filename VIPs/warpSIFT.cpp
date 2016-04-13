@@ -196,12 +196,14 @@ int main(int argc, char **argv)
     // Create sparse point with corresponding feature indices and normal plane
     // For now, normal plane is just taken directly from the nearest neighbour
     // Aggregate SIFT features for sparse point and calculate homography using
-    // rotation and translation. 
+    // rotation and translation. For each camera.
     sparseStream.getline(line, 1028);
     sparseStream.getline(line, 1028);
     int numSparsePoints = stoi(line);
+
     vector<sparseModelPoint> sparsePoints(numSparsePoints);
     ANNpoint queryPt = annAllocPt(dim);  
+
     for (int i = 0; i < numSparsePoints; i++){
         sparseStream.getline(line, 1028);
         istringstream ss(line);
@@ -243,6 +245,11 @@ int main(int argc, char **argv)
             **/
             ss >> ssf.modelXY[0];
             ss >> ssf.modelXY[1];
+            // cam: list feature index and camera index for each point. It doesn't tell you which camera
+            // belongs to which sift descriptor. Tian created cam to place it into camera. c is the same.
+            // cam and smp are both COPIES, while &ssf is a POINTER => working on ssf edits the real cam.
+            // ssf: sparse sift feature
+            // smp: sparse model point
             cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n";
             computeTranslation(cam, &ssf, smp);
             computeRotation(cam, &ssf, smp);
@@ -338,6 +345,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 // TODO: I can't math D:
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Turning quaternion to rotation matrix: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
+    // Confirmation: https://groups.google.com/forum/#!topic/vsfm/V4lhITH2yHw
     double to_camera[3][3];
     double w = c.quaternion[0];
     double x = c.quaternion[1];
