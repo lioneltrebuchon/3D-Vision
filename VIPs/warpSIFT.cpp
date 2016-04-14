@@ -8,6 +8,7 @@
 #include <cstdlib>                      // C standard library
 #include <cstdio>                       // C I/O (for sscanf)
 #include <cstring>                      // string manipulation
+#include <string>                       // for stoi
 #include <ANN/ANN.h>                    // ANN declarations
 #include <sstream> 
 #include <vector>
@@ -178,7 +179,10 @@ int main(int argc, char **argv)
     for (int i = 0; i < 13; i++){
         denseStream.getline(line, 1028);
     }
-    int check = denseStream.getline(line, 1028);
+    int check = 1;
+    if(!denseStream.getline(line, 1028)){
+        check=0;
+    }
     while(numPoints < maxPoints && check) {
         istringstream ss(line);
         for (int i = 0; i < dim; i++){
@@ -188,7 +192,9 @@ int main(int argc, char **argv)
             ss >> normals[numPoints][i];
         }
         numPoints++;
-        check = denseStream.getline(line, 1028);
+     if(!denseStream.getline(line, 1028)){
+        check=0;
+    }
     }
     ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim);
     denseStream.close();
