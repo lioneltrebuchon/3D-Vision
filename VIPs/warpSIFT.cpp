@@ -345,7 +345,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
     double dist = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        scaledNormal[i] = (smp.normal[0]/length)*dist*5;
+        scaledNormal[i] = (smp.normal[0]/length)*dist;
         normalPoint[i] = smp.point[i] + scaledNormal[i];
         s->translation[i] = c.center[i] - normalPoint[i];
 
@@ -381,6 +381,8 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
             s->rotation[i][j] = rot.at<double>(i,j);
         }
     }
+
+    cout << "Rotation: " << rot << "\n";
     
 }
 
@@ -402,7 +404,7 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
 
 void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
-    int size = s->Sift.size*50;
+    int size = s->Sift.size*20;
     Mat image, cropped;
     // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
@@ -453,7 +455,7 @@ Mat MakeRotationMatrix(sparseModelPoint smp) {
     rotMatrix.col(2) = X.cross(Y)/norm(X.cross(Y));
 
     rotMatrix.col(1) = rotMatrix.col(2).cross(X)/norm(rotMatrix.col(2).cross(X));
-    return rotMatrix.inv();
+    return rotMatrix;
 
 }
 
