@@ -91,6 +91,9 @@ Mat MakeRotationMatrix(sparseModelPoint smp);
 Compile command: (Probably don't need all the OpenCV libraries listed here)
 g++ warpSIFT.cpp -I/path/to/ann_1.1.2/include -L/path/to/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core
 
+To run, something like that:
+./a.out -df ../ETH_example_3D_model/dense3.nvm.cmvs/00/models/option-0000.ply -sf ../ETH_example_3D_model/dense3.nvm -sift ../ETH_example_3D_model/eth_photos_night
+
 * Must be given 3 flags:
 *       -df: path to dense file
 *       -sf: path to sparse file
@@ -384,6 +387,8 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
             s->rotation[i][j] = rot.at<double>(i,j);
         }
     }
+
+    cout << "Rotation: " << rot << "\n";
     
 }
 
@@ -405,7 +410,7 @@ void computeHomography(sparseSiftFeature *s, double normal[3]){
 
 void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
-    int size = s->Sift.size*50;
+    int size = s->Sift.size*20;
     Mat image, cropped;
     // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
@@ -437,7 +442,7 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // imwrite(patchName, cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
-    Mat H = Mat(3,3,CV_64FC1,s->H).inv();
+    Mat H = Mat(3,3,CV_64FC1,s->H);
     Mat warp = cropped.clone();
     warpPerspective(cropped, warp, H, warp.size());
     imwrite(patchName, warp);
