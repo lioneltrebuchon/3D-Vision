@@ -416,11 +416,11 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     Mat image, cropped;
     // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
-    // Crop the image to the SIFT patch
+    // Crop the image to the SIFT patch (coordinate system from upper left corner)
     int w = image.cols;
     int h = image.rows;
     int x = s->Sift.point[0] - size/2;
-    int y = h - s->Sift.point[1] - 1 - size/2;
+    int y = s->Sift.point[1] - size/2;
     if (x < 0) {
         x = 0;
     }
