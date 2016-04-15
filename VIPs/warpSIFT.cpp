@@ -453,17 +453,22 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
 Mat MakeRotationMatrix(sparseModelPoint smp) {
     cout << "Normal (" << smp.normal[0] << "," << smp.normal[1] << "," << smp.normal[2] << "): \n";
         
-    Mat rotMatrix = Mat::zeros(3,3,CV_64FC1);
+    Mat U = Mat::zeros(3,3,CV_64FC1);
 
     Mat X = Mat(3,1,CV_64FC1,smp.normal);
     Mat Y = Mat::zeros(3,1,CV_64FC1);
     Y.col(0).row(2) = 1;
-    rotMatrix.col(0) = (X.col(0) + 0);
-    
-    rotMatrix.col(2) = X.cross(Y)/norm(X.cross(Y));
+    U.col(0) = (X.col(0) + 0);
+    U.col(1) = X.cross(Y)/norm(X.cross(Y));
+    U.col(2) = (X.cross(U.col(1))+0);
 
-    rotMatrix.col(1) = rotMatrix.col(2).cross(X)/norm(rotMatrix.col(2).cross(X));
-    return rotMatrix;
+    Mat V = Mat::zeros(3,3,CV_64FC1);
+    V.col(0) = (Y.col(0) + 0);
+    V.col(1) = (U.col(1)+0);
+    V.col(2) = Y.cross(V.col(1));
+
+    U.t();
+    return V*U;
 
 }
 
