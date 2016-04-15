@@ -267,7 +267,7 @@ int main(int argc, char **argv)
             computeHomography(&ssf, smp.normal);
             computeRotation(cam, &ssf, smp);
             // a P becomes a VIP
-            createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j)+".jpg");
+            createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
             sparseSifts[j] = ssf;
         }
         smp.features = sparseSifts;
@@ -347,17 +347,25 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     double scaledNormal[3];
     double normalPoint[3];
     double distance[3];
+    double scaledCamera[3];
     for (int i = 0; i < 3; i++){
         distance[i] = c.center[i] - smp.point[i];
     }
     double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
     double dist = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        scaledNormal[i] = (smp.normal[0]/length)*dist;
+        scaledNormal[i] = (smp.normal[0]/length)*(dist + c.focalLength);
         normalPoint[i] = smp.point[i] + scaledNormal[i];
-        s->translation[i] = c.center[i] - normalPoint[i];
+        scaledCamera[i] = (c.center[i] - smp.point[i])*(dist + c.focalLength);
+        s->translation[i] = normalPoint[i] - (smp.point[i] + scaledCamera[i]);
+        s->translation[i] = s->translation[i]/(dist + c.focalLength);
+    }  
 
-    } 
+    cout << "Translation: ";
+    for (int i = 0; i < 3; i++){
+        cout << s->translation[i] << ", ";
+    }  
+    cout << "\n";
 }
 
 // TODO: I can't math D:
@@ -369,7 +377,6 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     double x = c.quaternion[1];
     double y = c.quaternion[2];
     double z = c.quaternion[3];
-    cout << "Quaternion: " << w << " " << x << " " << y << " " << z << "\n";
     to_camera[0][0] = 1 - 2*y*y - 2*z*z;
     to_camera[0][1] = 2*x*y - 2*z*w;
     to_camera[0][2] = 2*x*z + 2*y*w;
@@ -382,7 +389,8 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 
     Mat XY_to_camera = Mat(3,3,CV_64FC1,to_camera);
     Mat Normal_to_XY = MakeRotationMatrix(smp);
-    Mat rot = Normal_to_XY*XY_to_camera;
+    Mat rot = XY_to_camera*Normal_to_XY;
+    rot.inv();
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
@@ -441,35 +449,122 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
         y = 0;
     }
     cropped = image(Rect(x, y, size, size));
-    // imwrite(patchName, cropped); // Image patches look kinda sorta right :/
+    imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
     Mat H = Mat(3,3,CV_64FC1,s->H);
-    Mat warp = cropped.clone();
+    Mat S = Mat::eye(3,3,CV_64F);
+    S.at<double>(0,0) = size;
+    S.at<double>(1,1) = size;
+    H = S*H*S.inv();
+    Mat invH = H.clone().inv();
+    // invH.inv();
+    cout << "H: " << H << "\n";
+    cout << "invH: " << invH << "\n";
+
+    Mat corners = Mat(3,4,CV_64FC1);
+    corners.at<double>(0,0) = 0;
+    corners.at<double>(0,1) = size;
+    corners.at<double>(0,2) = size;
+    corners.at<double>(0,3) = 0;
+    corners.at<double>(1,0) = 0;
+    corners.at<double>(1,1) = 0;
+    corners.at<double>(1,2) = size;
+    corners.at<double>(1,3) = size;
+    corners.at<double>(2,0) = 1;
+    corners.at<double>(2,1) = 1;
+    corners.at<double>(2,2) = 1;
+    corners.at<double>(2,3) = 1;
+    cout << "C: " << corners << "\n";
+
+    Mat homographyCorners = invH*corners;
+    cout << "invC: " << homographyCorners << "\n";
+    homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
+    homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
+    cout << "C: " << homographyCorners << "\n";
+    double minX, minY, maxX, maxY;
+    minMaxLoc(homographyCorners.row(0),&minX, &maxX);
+    minMaxLoc(homographyCorners.row(1),&minY, &maxY);
+
+    int width = (int)maxX - minX;
+    int height = (int)maxY - minY;
+    cout << "width: " << width << " height: " << height << "\n";
+    double subX = 0;
+    double subY = 0;
+    if (minX < 0) {
+        subX = minX;
+    }
+    if (minY < 0) {
+        subY = minY;
+    }
+    // invH.at<double>(0,2) = invH.at<double>(0,2) - minX;
+    // invH.at<double>(1,2) = invH.at<double>(1,2) - minY;
+    Mat T = Mat::eye(3, 3, CV_64F);
+    T.at<double>(0,2) = -minX;
+    T.at<double>(1,2) = -minY;
+    invH = T*invH;
+    H = invH.clone();
+    H.inv();
+
+    cout << "H: " << H << "\n";
+    int sizes[3] = {height, width, 3};
+    Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     warpPerspective(cropped, warp, H, warp.size());
-    imwrite(patchName, warp);
+    imwrite(patchName + "VIP.jpg", warp);
 }
 
 Mat MakeRotationMatrix(sparseModelPoint smp) {
     cout << "Normal (" << smp.normal[0] << "," << smp.normal[1] << "," << smp.normal[2] << "): \n";
         
-    Mat U = Mat::zeros(3,3,CV_64FC1);
+    Mat R = Mat::zeros(3,3,CV_64FC1);
 
     Mat X = Mat(3,1,CV_64FC1,smp.normal);
     Mat Y = Mat::zeros(3,1,CV_64FC1);
     Y.col(0).row(2) = 1;
-    U.col(0) = (X.col(0) + 0);
-    U.col(1) = X.cross(Y)/norm(X.cross(Y));
-    U.col(2) = (X.cross(U.col(1))+0);
+    double dotProduct = X.at<double>(2,0);
+    double angle = acos(dotProduct);
+    Mat cross = X.cross(Y);
+    // cout << "angle: " << angle << "Cros: " << cross << "\n";
+    cross = cross/norm(cross);
+    // cout << "angle: " << angle << "Cros: " << cross << "\n";
+    // U.col(0) = (X.col(0) + 0);
+    // U.col(1) = X.cross(Y)/norm(X.cross(Y));
+    // U.col(2) = (X.cross(U.col(1))+0);
 
-    Mat V = Mat::zeros(3,3,CV_64FC1);
-    V.col(0) = (Y.col(0) + 0);
-    V.col(1) = (U.col(1)+0);
-    V.col(2) = Y.cross(V.col(1));
+    // Mat V = Mat::zeros(3,3,CV_64FC1);
+    // V.col(0) = (Y.col(0) + 0);
+    // V.col(1) = (U.col(1)+0);
+    // V.col(2) = Y.cross(V.col(1));
 
-    U.t();
-    return V*U;
 
+    // U.t();
+
+    double c = cos(angle);
+    double s = sin(angle);
+    double t = 1.0 - c;
+
+    double x = cross.at<double>(0,0);
+    double y = cross.at<double>(1,0);
+    double z = cross.at<double>(2,0);
+
+    R.at<double>(0,0) = c + x*x*t;
+    R.at<double>(1,1) = c + y*y*t;
+    R.at<double>(2,2) = c + z*z*t;
+
+
+    double tmp1 = x*y*t;
+    double tmp2 = z*s;
+    R.at<double>(1,0) = tmp1 + tmp2;
+    R.at<double>(0,1) = tmp1 - tmp2;
+    tmp1 = x*z*t;
+    tmp2 = y*s;
+    R.at<double>(2,0) = tmp1 - tmp2;
+    R.at<double>(0,2) = tmp1 + tmp2;    
+    tmp1 = y*z*t;
+    tmp2 = x*s;
+    R.at<double>(2,1) = tmp1 + tmp2;
+    R.at<double>(1,2) = tmp1 - tmp2;
+    return R;
 }
 
 
