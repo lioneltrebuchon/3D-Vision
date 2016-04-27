@@ -47,6 +47,7 @@ public:
     double translation[3];
     double rotation[3][3];
     double H[3][3];
+    double R1[3][3];
 };
 
 class sparseModelPoint{
@@ -79,7 +80,7 @@ static inline int IsValidFeatureName(int value)
 vector<SiftFeature> readSIFT(string filename, int index);
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
-void computeHomography(sparseSiftFeature *s, double normal[3]);
+void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]);
 void createVIP(string imageName, sparseSiftFeature *s, string patchName);
 Mat MakeRotationMatrix(sparseModelPoint smp);  
 
@@ -174,8 +175,8 @@ int main(int argc, char **argv)
 
     // Read in dense model for use in nearest neighbour calculations later
     ANNpointArray densePts = annAllocPts(maxPoints, 3);
-    double eps = 0;
-    int k = 1; // Only find one nearest neighbour for now
+    double eps = 0.01;
+    int k = 4; 
     int dim = 3;
     ANNidxArray nnIdx = new ANNidx[k];
     ANNdistArray dists = new ANNdist[k]; 
@@ -197,9 +198,9 @@ int main(int argc, char **argv)
             ss >> normals[numPoints][i];
         }
         numPoints++;
-     if(!denseStream.getline(line, 1028)){
-        check=0;
-    }
+        if(!denseStream.getline(line, 1028)){
+            check=0;
+        }
     }
     ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim);
     denseStream.close();
@@ -225,10 +226,24 @@ int main(int argc, char **argv)
             ss >> smp.point[j];
             queryPt[j] = smp.point[j];
         }
-        kdTree->annkSearch(queryPt, k, nnIdx, dists, eps);   
-        for (int j = 0; j < 3; j++){
-            smp.normal[j] = normals[nnIdx[0]][j]; 
+        kdTree->annkSearch(queryPt, k, nnIdx, dists, eps);  
+        for (int k2 = 0; k2 < k; k2++){
+            for (int j = 0; j < 3; j++){
+                smp.normal[j] += normals[nnIdx[k2]][j]; 
+            }
+
         }
+        for (int j = 0; j < 3; j++){
+            smp.normal[j] = smp.normal[j]/k;
+        }
+        // for (int j = 0; j < 3; j++){
+        //     smp.normal[j] = normals[nnIdx[0]][j];
+        // }
+
+        // for (int j = 0; j < 3; j++){
+        //     smp.normal[j] = 0.001;
+        // }
+        // smp.normal[2] = 1;
 
         int temp;
         for (int j = 0; j < 3; j++){
@@ -240,6 +255,7 @@ int main(int argc, char **argv)
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
         cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
+        cout << "Dense Point: (" << densePts[nnIdx[0]][0] << "," << densePts[nnIdx[0]][1] << "," << densePts[nnIdx[0]][2] << "): \n";
         cout << numSift << " SIFT features\n";
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
@@ -263,9 +279,9 @@ int main(int argc, char **argv)
             // ssf: sparse sift feature
             // smp: sparse model point
             cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n";
-            computeTranslation(cam, &ssf, smp);
-            computeHomography(&ssf, smp.normal);
             computeRotation(cam, &ssf, smp);
+            computeTranslation(cam, &ssf, smp);
+            computeHomography(cam, &ssf, smp.normal);
             // a P becomes a VIP
             createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
             sparseSifts[j] = ssf;
@@ -344,25 +360,23 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Treating the centre of the camera as the centre of the SIFT feature. So when warping,
     // may need to crop and centre the SIFT feature first
     // Vector is from normal plane to camera plane. Easily reversed
-    double scaledNormal[3];
-    double normalPoint[3];
+    double c2[3];
     double distance[3];
-    double scaledCamera[3];
     for (int i = 0; i < 3; i++){
         distance[i] = c.center[i] - smp.point[i];
     }
-    double length = sqrt(smp.normal[0]*smp.normal[0]+smp.normal[1]*smp.normal[1]+smp.normal[2]*smp.normal[2]);
-    double dist = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
+    double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        scaledNormal[i] = (smp.normal[0]/length)*(dist + c.focalLength);
-        normalPoint[i] = smp.point[i] + scaledNormal[i];
-        scaledCamera[i] = (c.center[i] - smp.point[i])*(dist + c.focalLength);
-        s->translation[i] = normalPoint[i] - (smp.point[i] + scaledCamera[i]);
-        s->translation[i] = s->translation[i]/(dist + c.focalLength);
+        c2[i] = smp.point[i] + d*smp.normal[i];
     }  
+    Mat C1 = Mat(3,1,CV_64FC1,c.center);
+    Mat C2 = Mat(3,1,CV_64FC1,c2); 
+    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat t = R1*(C2-C1);
 
     cout << "Translation: ";
     for (int i = 0; i < 3; i++){
+        s->translation[i] = t.at<double>(0,i);
         cout << s->translation[i] << ", ";
     }  
     cout << "\n";
@@ -387,33 +401,67 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     to_camera[2][1] = 2*y*z + 2*x*w;
     to_camera[2][2] = 1 - 2*x*x - 2*y*y;
 
-    Mat XY_to_camera = Mat(3,3,CV_64FC1,to_camera);
-    Mat Normal_to_XY = MakeRotationMatrix(smp);
-    Mat rot = XY_to_camera*Normal_to_XY;
-    rot.inv();
+    Mat vec1;
+    Mat vec2;
+    Mat X = Mat(3,1,CV_64FC1,smp.normal);
+    Mat up = Mat::zeros(3,1,CV_64FC1);
+    up.col(0).row(2) = 1;
+    vec1 = X.cross(up);
+    vec1 = vec1/norm(vec1);
+    vec2 = vec1.cross(X);
+    vec2 = vec2/norm(vec2);
+
+    Mat R2 = Mat::zeros(3,3,CV_64FC1);
+    R2.row(0) = vec1.t();
+    R2.row(1) = vec2.t();
+    R2.row(2) = X.t();
+
+    Mat R1 = Mat(3,3,CV_64FC1,to_camera);
+    // cout << "toCamera:" << XY_to_camera << "\n";
+    // Mat trans = Mat(3,1,CV_64FC1,s->translation);
+    // trans = XY_to_camera*trans;
+    // Mat Normal_to_XY = MakeRotationMatrix(smp);
+    // cout << "toXY:" << Normal_to_XY << "\n";
+    // Mat rot = XY_to_camera*Normal_to_XY;
+    // // rot = rot.inv();
+    Mat R = R2*R1.t();
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
-            s->rotation[i][j] = rot.at<double>(i,j);
+            s->rotation[i][j] = R.at<double>(i,j);
+            s->R1[i][j] = R1.at<double>(i,j);
         }
     }
 
-    cout << "Rotation: " << rot << "\n";
+    // cout << "Rotation: " << rot << "\n";
     
 }
 
-void computeHomography(sparseSiftFeature *s, double normal[3]){
+void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Using equation 3 from the paper because that seems
     // kinda sorta right
-    double tn[3][3];
-    for (int i = 0; i < 3; i++){
-        for (int j =0; j < 3; j++){
-            tn[i][j] = s->translation[i]*normal[j];
-        }
-    }
+
+    Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    K1.at<double>(0,0) = c.focalLength;
+    K1.at<double>(1,1) = c.focalLength;
+    K1.at<double>(2,2) = 1;
+
+    Mat R = Mat(3,3,CV_64FC1, s->rotation);
+    Mat t = Mat(3,1,CV_64FC1, s->translation);
+    Mat n = Mat(3,1,CV_64FC1, normal);
+    // Mat H = (R+t*n.t())*K1.inv();
+    cout << "testin, testing: " << K1.inv() << endl;
+    Mat H = (R+t*n.t());
+
+    // double tn[3][3];
+    // for (int i = 0; i < 3; i++){
+    //     for (int j =0; j < 3; j++){
+    //         tn[i][j] = s->translation[i]*normal[j];
+    //     }
+    // }
     for (int i =0; i < 3; i++){
         for (int j =0; j < 3; j++){
-            s->H[i][j] = s->rotation[i][j] + tn[i][j];
+            s->H[i][j] = H.at<double>(i,j);
         }
     }
 }
@@ -457,10 +505,9 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     S.at<double>(0,0) = size;
     S.at<double>(1,1) = size;
     H = S*H*S.inv();
+    // H = H.inv();
     Mat invH = H.clone().inv();
     // invH.inv();
-    cout << "H: " << H << "\n";
-    cout << "invH: " << invH << "\n";
 
     Mat corners = Mat(3,4,CV_64FC1);
     corners.at<double>(0,0) = 0;
@@ -475,10 +522,8 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     corners.at<double>(2,1) = 1;
     corners.at<double>(2,2) = 1;
     corners.at<double>(2,3) = 1;
-    cout << "C: " << corners << "\n";
 
     Mat homographyCorners = invH*corners;
-    cout << "invC: " << homographyCorners << "\n";
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
     cout << "C: " << homographyCorners << "\n";
@@ -488,7 +533,6 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
 
     int width = (int)maxX - minX;
     int height = (int)maxY - minY;
-    cout << "width: " << width << " height: " << height << "\n";
     double subX = 0;
     double subY = 0;
     if (minX < 0) {
@@ -497,8 +541,6 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     if (minY < 0) {
         subY = minY;
     }
-    // invH.at<double>(0,2) = invH.at<double>(0,2) - minX;
-    // invH.at<double>(1,2) = invH.at<double>(1,2) - minY;
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
     T.at<double>(1,2) = -minY;
@@ -506,7 +548,6 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     H = invH.clone();
     H.inv();
 
-    cout << "H: " << H << "\n";
     int sizes[3] = {height, width, 3};
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     warpPerspective(cropped, warp, H, warp.size());
@@ -564,6 +605,7 @@ Mat MakeRotationMatrix(sparseModelPoint smp) {
     tmp2 = x*s;
     R.at<double>(2,1) = tmp1 + tmp2;
     R.at<double>(1,2) = tmp1 - tmp2;
+
     return R;
 }
 
