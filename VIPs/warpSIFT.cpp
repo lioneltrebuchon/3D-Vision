@@ -81,7 +81,7 @@ vector<SiftFeature> readSIFT(string filename, int index);
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]);
-void createVIP(string imageName, sparseSiftFeature *s, string patchName);
+void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchName);
 Mat MakeRotationMatrix(sparseModelPoint smp);  
 
 /******************************
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     // Read in dense model for use in nearest neighbour calculations later
     ANNpointArray densePts = annAllocPts(maxPoints, 3);
     double eps = 0.01;
-    int k = 4; 
+    int k = 5; 
     int dim = 3;
     ANNidxArray nnIdx = new ANNidx[k];
     ANNdistArray dists = new ANNdist[k]; 
@@ -255,8 +255,6 @@ int main(int argc, char **argv)
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
         cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
-        cout << "Dense Point: (" << densePts[nnIdx[0]][0] << "," << densePts[nnIdx[0]][1] << "," << densePts[nnIdx[0]][2] << "): \n";
-        cout << numSift << " SIFT features\n";
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
             ss >> ns;
@@ -283,7 +281,7 @@ int main(int argc, char **argv)
             computeTranslation(cam, &ssf, smp);
             computeHomography(cam, &ssf, smp.normal);
             // a P becomes a VIP
-            createVIP(siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
+            createVIP(cam, siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
             sparseSifts[j] = ssf;
         }
         smp.features = sparseSifts;
@@ -417,6 +415,9 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     R2.row(2) = X.t();
 
     Mat R1 = Mat(3,3,CV_64FC1,to_camera);
+    R1 = R1.t();
+    cout << "Camera Centre: " << c.center[0] << "," << c.center[1] << "," << c.center[2] << "\n";
+    cout << "Rotation 1: \n" << R1 << "\n";
     // cout << "toCamera:" << XY_to_camera << "\n";
     // Mat trans = Mat(3,1,CV_64FC1,s->translation);
     // trans = XY_to_camera*trans;
@@ -441,16 +442,16 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Using equation 3 from the paper because that seems
     // kinda sorta right
 
-    Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    K1.at<double>(0,0) = c.focalLength;
-    K1.at<double>(1,1) = c.focalLength;
-    K1.at<double>(2,2) = 1;
+    // Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    // K1.at<double>(0,0) = c.focalLength;
+    // K1.at<double>(1,1) = c.focalLength;
+    // K1.at<double>(2,2) = 1;
 
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
     // Mat H = (R+t*n.t())*K1.inv();
-    cout << "testin, testing: " << K1.inv() << endl;
+    // cout << "testin, testing: " << K1.inv() << endl;
     Mat H = (R+t*n.t());
 
     // double tn[3][3];
@@ -466,7 +467,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     }
 }
 
-void createVIP(string imageName, sparseSiftFeature *s, string patchName){
+void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
     int size = s->Sift.size*20;
     Mat image, cropped;
@@ -475,6 +476,9 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     // Crop the image to the SIFT patch (coordinate system from upper left corner)
     int w = image.cols;
     int h = image.rows;
+
+    
+
     int x = s->Sift.point[0] - size/2;
     int y = s->Sift.point[1] - size/2;
     if (x < 0) {
@@ -496,11 +500,19 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
     if (y < 0) {
         y = 0;
     }
+    Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    K1.at<double>(0,0) = 1.2;
+    K1.at<double>(1,1) = 1.2;
+    K1.at<double>(2,2) = 1;
+    K1.at<double>(0,2) = x/2;
+    K1.at<double>(1,2) = y/2;
     cropped = image(Rect(x, y, size, size));
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
     Mat H = Mat(3,3,CV_64FC1,s->H);
+    H = H*K1.inv();
+
     Mat S = Mat::eye(3,3,CV_64F);
     S.at<double>(0,0) = size;
     S.at<double>(1,1) = size;
@@ -533,6 +545,9 @@ void createVIP(string imageName, sparseSiftFeature *s, string patchName){
 
     int width = (int)maxX - minX;
     int height = (int)maxY - minY;
+    if (width > 4*x || height > 4*y){
+        return;
+    }
     double subX = 0;
     double subY = 0;
     if (minX < 0) {
