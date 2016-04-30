@@ -438,19 +438,23 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     
 }
 
-void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
+void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], sparseModelPoint smp){
     // Using equation 3 from the paper because that seems
     // kinda sorta right
 
-    // Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    // K1.at<double>(0,0) = c.focalLength;
-    // K1.at<double>(1,1) = c.focalLength;
-    // K1.at<double>(2,2) = 1;
+    Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    K1.at<double>(0,0) = c.focalLength;
+    K1.at<double>(1,1) = c.focalLength;
+    K1.at<double>(2,2) = 1;
 
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
+    Mat R = Mat(3,3,CV_64FC1, s->R1);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
-    // Mat H = (R+t*n.t())*K1.inv();
+    float Xp = Mat(3,3,CV_64FC1, s->rotation);
+    double c1 = c->centre;
+    double d1 = (R1*n).t()*R1*(Xp-c1)
+    Mat H = (R+R*t*(R1*n).t())*K1.inv(); // black-board: (R+t*n.t())*K1.inv();
     // cout << "testin, testing: " << K1.inv() << endl;
     Mat H = (R+t*n.t());
 
