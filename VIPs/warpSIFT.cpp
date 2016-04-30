@@ -470,7 +470,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     f.at<double>(0,2) = c.focalLength;
     
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
-    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat R1 = Mat(3,3,CV_64FC1, s->R2);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
     Mat c1 = Mat(3,1,CV_64FC1, c.center);
@@ -478,7 +478,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Mat d1 = Mat::zeros(3,3,CV_64FC1);
     // d1 = (R1*n).t()*R1*f;
     double d1f = s->d;
-    Mat H = K1*(R+R*t*(((R1*n).t())/d1f))K1.inv();
+    Mat H = K1*(R+R*t*(((R1*n).t())/d1f))*K1.inv();
 
     // double tn[3][3];
     // for (int i = 0; i < 3; i++){
@@ -526,18 +526,18 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     if (y < 0) {
         y = 0;
     }
-    Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    K1.at<double>(0,0) = c.focalLength;
-    K1.at<double>(1,1) = c.focalLength;
-    K1.at<double>(2,2) = 1;
-    K1.at<double>(0,2) = x/2;
-    K1.at<double>(1,2) = y/2;
+    // Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    // K1.at<double>(0,0) = c.focalLength;
+    // K1.at<double>(1,1) = c.focalLength;
+    // K1.at<double>(2,2) = 1;
+    // K1.at<double>(0,2) = x/2;
+    // K1.at<double>(1,2) = y/2;
     cropped = image(Rect(x, y, size, size));
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
     Mat H = Mat(3,3,CV_64FC1,s->H);
-    H = K1*H*K1.inv();
+    // H = K1*H*K1.inv();
     H = H.inv();
 
     // Mat S = Mat::eye(3,3,CV_64F);
@@ -588,7 +588,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     T.at<double>(1,2) = -minY;
     invH = T*invH;
     H = invH.clone();
-    H.inv();
+    // H = H.inv();
 
     int sizes[3] = {height, width, 3};
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
