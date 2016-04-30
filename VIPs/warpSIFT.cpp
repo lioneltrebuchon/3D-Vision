@@ -438,7 +438,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     
 }
 
-void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], sparseModelPoint smp){
+void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Using equation 3 from the paper because that seems
     // kinda sorta right
 
