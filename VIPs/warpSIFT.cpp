@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     // Read in dense model for use in nearest neighbour calculations later
     ANNpointArray densePts = annAllocPts(maxPoints, 3);
     double eps = 0.01;
-    int k = 5; 
+    int k = 1;  //was 5 before 
     int dim = 3;
     ANNidxArray nnIdx = new ANNidx[k];
     ANNdistArray dists = new ANNdist[k]; 
@@ -442,17 +442,27 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Using equation 3 from the paper because that seems
     // kinda sorta right
 
-    // Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    // K1.at<double>(0,0) = c.focalLength;
-    // K1.at<double>(1,1) = c.focalLength;
-    // K1.at<double>(2,2) = 1;
+    Mat K1 = Mat::zeros(3,3,CV_64FC1);
+    K1.at<double>(0,0) = c.focalLength;
+    K1.at<double>(1,1) = c.focalLength;
+    K1.at<double>(2,2) = 1;
 
+    Mat f = Mat::zeros(3,1,CV_64FC1);
+    f.at<double>(0,2) = c.focalLength;
+    
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
+    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
-    // Mat H = (R+t*n.t())*K1.inv();
-    // cout << "testin, testing: " << K1.inv() << endl;
-    Mat H = (R+t*n.t());
+    Mat c1 = Mat(3,1,CV_64FC1, c.center);
+
+    Mat d1 = Mat::zeros(3,3,CV_64FC1);
+    d1 = (R1*n).t()*R1*f;
+    double d1f = d1.at<double>(0,0);
+
+    Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
+    cout << "testin, testing: " << K1 << endl;
+    // Mat H = (R+R*t*n.t());
 
     // double tn[3][3];
     // for (int i = 0; i < 3; i++){
