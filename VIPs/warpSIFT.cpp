@@ -464,6 +464,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     double d1f = d1.at<double>(0,0);
 
 
+
     Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
     // Mat H = (R+R*t*((up.t())/d1f))*K1.inv();
 
