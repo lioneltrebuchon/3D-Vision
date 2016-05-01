@@ -468,6 +468,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
     // Mat H = (R+R*t*((up.t())/d1f))*K1.inv();
 
+
     cout << "testin, testing: " << K1 << endl;
     // Mat H = (R+R*t*n.t());
 
