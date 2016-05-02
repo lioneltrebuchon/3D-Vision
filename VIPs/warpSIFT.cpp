@@ -227,15 +227,21 @@ int main(int argc, char **argv)
             queryPt[j] = smp.point[j];
         }
         kdTree->annkSearch(queryPt, k, nnIdx, dists, eps);  
-        for (int k2 = 0; k2 < k; k2++){
-            for (int j = 0; j < 3; j++){
-                smp.normal[j] += normals[nnIdx[k2]][j]; 
-            }
+        // for (int k2 = 0; k2 < k; k2++){
+        //     for (int j = 0; j < 3; j++){
+        //         smp.normal[j] += normals[nnIdx[k2]][j]; 
+        //     }
 
-        }
+        // }
+        // for (int j = 0; j < 3; j++){
+        //     smp.normal[j] = smp.normal[j]/k;
+        // }
+
         for (int j = 0; j < 3; j++){
-            smp.normal[j] = smp.normal[j]/k;
-        }
+            smp.normal[j] = normals[nnIdx[0]][j];
+            // smp.normal[i] = no
+        } 
+
         // for (int j = 0; j < 3; j++){
         //     smp.normal[j] = normals[nnIdx[0]][j];
         // }
@@ -254,7 +260,7 @@ int main(int argc, char **argv)
         ss >> ns;
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
-        cout << "Point (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
+        cout << "Point" << i << ": (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
             ss >> ns;
@@ -276,7 +282,7 @@ int main(int argc, char **argv)
             // cam and smp are both COPIES, while &ssf is a POINTER => working on ssf edits the real cam.
             // ssf: sparse sift feature
             // smp: sparse model point
-            cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n";
+            cout << "\t" << ssf.Sift.point[0] << "," << ssf.Sift.point[1] << " in image " << cam.name << "\n"; 
             computeRotation(cam, &ssf, smp);
             computeTranslation(cam, &ssf, smp);
             computeHomography(cam, &ssf, smp.normal);
@@ -365,19 +371,13 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }
     double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        c2[i] = smp.point[i] + d*smp.normal[i];
+        // c2[i] = smp.point[i] + d*smp.normal[i];
+        c2[i] = smp.normal[i]*smp.point[i];
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
     Mat R1 = Mat(3,3,CV_64FC1, s->R1);
     Mat t = R1*(C2-C1);
-
-    cout << "Translation: ";
-    for (int i = 0; i < 3; i++){
-        s->translation[i] = t.at<double>(0,i);
-        cout << s->translation[i] << ", ";
-    }  
-    cout << "\n";
 }
 
 // TODO: I can't math D:
@@ -416,8 +416,6 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 
     Mat R1 = Mat(3,3,CV_64FC1,to_camera);
     R1 = R1.t();
-    cout << "Camera Centre: " << c.center[0] << "," << c.center[1] << "," << c.center[2] << "\n";
-    cout << "Rotation 1: \n" << R1 << "\n";
     // cout << "toCamera:" << XY_to_camera << "\n";
     // Mat trans = Mat(3,1,CV_64FC1,s->translation);
     // trans = XY_to_camera*trans;
@@ -463,13 +461,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     d1 = (R1*n).t()*R1*f;
     double d1f = d1.at<double>(0,0);
 
-
-
     Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
-    // Mat H = (R+R*t*((up.t())/d1f))*K1.inv();
-
-
-    cout << "testin, testing: " << K1 << endl;
     // Mat H = (R+R*t*n.t());
 
     // double tn[3][3];
@@ -487,7 +479,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
 
 void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchName){
     // Treating the size of the patch as 10*size of sift feature
-    int size = s->Sift.size*20;
+    int size = s->Sift.size*10;
     Mat image, cropped;
     // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
@@ -525,10 +517,17 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // K1.at<double>(0,2) = x/2;
     // K1.at<double>(1,2) = y/2;
     cropped = image(Rect(x, y, size, size));
-    imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
 
     // Warp the image
+    Mat K2 = Mat::zeros(3,3,CV_64FC1);
+    K2.at<double>(0,0) = c.focalLength;
+    K2.at<double>(1,1) = c.focalLength;
+    K2.at<double>(2,2) = 1;
+    K2.at<double>(0,2) = x/2;
+    K2.at<double>(1,2) = y/2;
     Mat H = Mat(3,3,CV_64FC1,s->H);
+    H = K2*H;
+    // H = H.inv();
     // H = H*K1.inv();
 
     // Mat S = Mat::eye(3,3,CV_64F);
@@ -556,16 +555,15 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat homographyCorners = invH*corners;
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
-    cout << "C: " << homographyCorners << "\n";
     double minX, minY, maxX, maxY;
     minMaxLoc(homographyCorners.row(0),&minX, &maxX);
     minMaxLoc(homographyCorners.row(1),&minY, &maxY);
 
     int width = (int)maxX - minX;
     int height = (int)maxY - minY;
-    // if (width > 4*x || height > 4*y){
-    //     return;
-    // }
+    if (width > 10000 || height > 10000){
+        return;
+    }
     double subX = 0;
     double subY = 0;
     if (minX < 0) {
@@ -579,11 +577,17 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     T.at<double>(1,2) = -minY;
     invH = T*invH;
     H = invH.clone();
-    H.inv();
 
     int sizes[3] = {height, width, 3};
+    Mat flippedCrop;
+    Mat rotatedCrop;
+    transpose(cropped, rotatedCrop);
+    flip(rotatedCrop, flippedCrop,0);
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
+    // warpPerspective(flippedCrop, warp, H, warp.size());
+    // imwrite(patchName + "VIPFlip.jpg", warp);
     warpPerspective(cropped, warp, H, warp.size());
+    imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
 }
 
