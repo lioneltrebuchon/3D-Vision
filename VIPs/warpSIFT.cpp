@@ -371,13 +371,18 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }
     double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        // c2[i] = smp.point[i] + d*smp.normal[i];
-        c2[i] = smp.normal[i]*smp.point[i];
+        c2[i] = smp.point[i] + d*smp.normal[i];
+        // c2[i] = smp.normal[i]*smp.point[i];
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
     Mat R1 = Mat(3,3,CV_64FC1, s->R1);
     Mat t = R1*(C2-C1);
+
+    for (int i = 0; i < 3; i++){
+            s->translation[i] = t.at<double>(i,0);
+        }
+
 }
 
 // TODO: I can't math D:
@@ -462,6 +467,8 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     double d1f = d1.at<double>(0,0);
 
     Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
+    cout << "t " << t <<endl;
+    cout << "H " << H <<endl;
     // Mat H = (R+R*t*n.t());
 
     // double tn[3][3];
@@ -576,13 +583,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     T.at<double>(0,2) = -minX;
     T.at<double>(1,2) = -minY;
     invH = T*invH;
-    H = invH.clone();
+    H = invH.clone(); // the sacred line
 
     int sizes[3] = {height, width, 3};
-    Mat flippedCrop;
-    Mat rotatedCrop;
-    transpose(cropped, rotatedCrop);
-    flip(rotatedCrop, flippedCrop,0);
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
