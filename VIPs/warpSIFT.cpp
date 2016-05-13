@@ -371,7 +371,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }
     double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
-        c2[i] = smp.point[i] + d*smp.normal[i];
+        c2[i] = smp.point[i] + smp.normal[i];
         // c2[i] = smp.normal[i]*smp.point[i];
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
