@@ -369,7 +369,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     for (int i = 0; i < 3; i++){
         distance[i] = c.center[i] - smp.point[i];
     }
-    double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
+    double d = 1; // sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
     for (int i = 0; i < 3; i++){
         c2[i] = smp.point[i] + d*smp.normal[i];
         // c2[i] = smp.normal[i]*smp.point[i];
@@ -437,7 +437,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
         }
     }
 
-    // cout << "Rotation: " << rot << "\n";
+    //cout << "Rotation: " << rot << "\n";
     
 }
 
@@ -527,9 +527,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     // Warp the image
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
-    K2.at<double>(0,0) = c.focalLength;
-    K2.at<double>(1,1) = c.focalLength;
-    K2.at<double>(2,2) = 1;
+    K2.at<double>(0,0) = c.focalLength; // c.focalLength;
+    K2.at<double>(1,1) = c.focalLength; // c.focalLength;
+    K2.at<double>(2,2) = 1;// homogeneous coord. 3d (world) -> 2d (pixel)
     K2.at<double>(0,2) = x/2;
     K2.at<double>(1,2) = y/2;
     Mat H = Mat(3,3,CV_64FC1,s->H);
@@ -590,6 +590,16 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
     warpPerspective(cropped, warp, H, warp.size());
+    /// Displaying images in window
+    namedWindow("Warped",CV_WINDOW_NORMAL);
+    resizeWindow("Warped",400,400);
+    namedWindow("Original",CV_WINDOW_NORMAL);
+    moveWindow("Original",100,100);
+    resizeWindow("Original",400,400);
+    imshow("Original",cropped);
+    imshow("Warped",warp);
+    cv::waitKey(0);
+
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
 }
