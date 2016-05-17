@@ -35,7 +35,7 @@ class Camera
       double focalLength; 
       double quaternion[4]; 
       double center[3];
-      double radialDistortion;
+      double radialDistortion; // fish-eye etc...
       vector<SiftFeature> SiftVector; 
 };
 
@@ -47,7 +47,7 @@ public:
     double translation[3];
     double rotation[3][3];
     double H[3][3];
-    double R1[3][3];
+    double R_C1W[3][3];
 };
 
 class sparseModelPoint{
@@ -77,7 +77,7 @@ static inline int IsValidFeatureName(int value)
     return value == SIFT_NAME || value == MSER_NAME;
 }
 
-vector<SiftFeature> readSIFT(string filename, int index);
+vector<SiftFeature> readSIFT(string filename, int index);  // ???
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]);
@@ -176,7 +176,7 @@ int main(int argc, char **argv)
     // Read in dense model for use in nearest neighbour calculations later
     ANNpointArray densePts = annAllocPts(maxPoints, 3);
     double eps = 0.01;
-    int k = 5;  //was 5 before 
+    int k = 5;  //was 5 before   ???
     int dim = 3;
     ANNidxArray nnIdx = new ANNidx[k];
     ANNdistArray dists = new ANNdist[k]; 
@@ -202,7 +202,7 @@ int main(int argc, char **argv)
             check=0;
         }
     }
-    ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim);
+    ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim); // ??? + where is nearest neighbor search???
     denseStream.close();
 
 
@@ -261,6 +261,8 @@ int main(int argc, char **argv)
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
         cout << "Point" << i << ": (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
+
+        // CREATION OF VIP
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
             ss >> ns;
@@ -292,12 +294,12 @@ int main(int argc, char **argv)
         }
         smp.features = sparseSifts;
         sparsePoints[i] = smp;
-    }
+    }   // END OF VIP
+
     sparseStream.close();
 
     // Every point in sparsePoints should now have a list of VIPs
-    // TODO: Get rid of extra information
-
+    // Get rid of extra information
     delete [] nnIdx;
     delete [] dists;
     delete kdTree;
@@ -369,15 +371,15 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     for (int i = 0; i < 3; i++){
         distance[i] = c.center[i] - smp.point[i];
     }
-    double d = 1; // sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
+    double d =  sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);;
     for (int i = 0; i < 3; i++){
         c2[i] = smp.point[i] + d*smp.normal[i];
         // c2[i] = smp.normal[i]*smp.point[i];
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
-    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
-    Mat t = R1*(C2-C1);
+    Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
+    Mat t = R_C1W*(C2-C1);
 
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
@@ -390,7 +392,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Turning quaternion to rotation matrix: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
     // Confirmation: https://groups.google.com/forum/#!topic/vsfm/V4lhITH2yHw
     double to_camera[3][3];
-    double w = c.quaternion[0];
+    double w = c.quaternion[0];  // order right!
     double x = c.quaternion[1];
     double y = c.quaternion[2];
     double z = c.quaternion[3];
@@ -414,13 +416,13 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     vec2 = vec1.cross(X);
     vec2 = vec2/norm(vec2);
 
-    Mat R2 = Mat::zeros(3,3,CV_64FC1);
-    R2.row(0) = vec1.t();
-    R2.row(1) = vec2.t();
-    R2.row(2) = X.t();
+    Mat R_C2W = Mat::zeros(3,3,CV_64FC1);
+    R_C2W.row(0) = vec1.t();
+    R_C2W.row(1) = vec2.t();
+    R_C2W.row(2) = X.t();
 
-    Mat R1 = Mat(3,3,CV_64FC1,to_camera);
-    R1 = R1.t();
+    Mat R_C1W = Mat(3,3,CV_64FC1,to_camera);
+    R_C1W = R_C1W.t();
     // cout << "toCamera:" << XY_to_camera << "\n";
     // Mat trans = Mat(3,1,CV_64FC1,s->translation);
     // trans = XY_to_camera*trans;
@@ -428,12 +430,12 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // cout << "toXY:" << Normal_to_XY << "\n";
     // Mat rot = XY_to_camera*Normal_to_XY;
     // // rot = rot.inv();
-    Mat R = R2*R1.t();
+    Mat R = R_C2W*R_C1W.t();
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
             s->rotation[i][j] = R.at<double>(i,j);
-            s->R1[i][j] = R1.at<double>(i,j);
+            s->R_C1W[i][j] = R_C1W.at<double>(i,j);
         }
     }
 
@@ -457,16 +459,16 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     up.at<double>(0,2) = 1;
     
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
-    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
     Mat c1 = Mat(3,1,CV_64FC1, c.center);
 
     Mat d1 = Mat::zeros(3,3,CV_64FC1);
-    d1 = (R1*n).t()*R1*f;
+    d1 = (R_C1W*n).t()*R_C1W*f;
     double d1f = d1.at<double>(0,0);
 
-    Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
+    Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
     cout << "t " << t <<endl;
     cout << "H " << H <<endl;
     // Mat H = (R+R*t*n.t());
@@ -529,7 +531,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
     K2.at<double>(0,0) = c.focalLength; // c.focalLength;
     K2.at<double>(1,1) = c.focalLength; // c.focalLength;
-    K2.at<double>(2,2) = 1;// homogeneous coord. 3d (world) -> 2d (pixel)
+    K2.at<double>(2,2) = -1;// homogeneous coord. 3d (world) -> 2d (pixel)
     K2.at<double>(0,2) = x/2;
     K2.at<double>(1,2) = y/2;
     Mat H = Mat(3,3,CV_64FC1,s->H);
@@ -594,7 +596,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     namedWindow("Warped",CV_WINDOW_NORMAL);
     resizeWindow("Warped",400,400);
     namedWindow("Original",CV_WINDOW_NORMAL);
-    moveWindow("Original",100,100);
+    moveWindow("Original",400,100);
     resizeWindow("Original",400,400);
     imshow("Original",cropped);
     imshow("Warped",warp);
