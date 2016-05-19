@@ -527,6 +527,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // K1.at<double>(1,2) = y/2;
     cropped = image(Rect(x, y, size, size));
 
+    // CALCULATION OF H (WARP, HOMOGRAPHY MATRIX)
     // Warp the image
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
     K2.at<double>(0,0) = c.focalLength; // c.focalLength;
@@ -536,6 +537,8 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     K2.at<double>(1,2) = y/2;
     Mat H = Mat(3,3,CV_64FC1,s->H);
     H = K2*H;
+    // END OF HOMOGRAPHY
+
     // H = H.inv();
     // H = H*K1.inv();
 
@@ -547,6 +550,8 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat invH = H.clone().inv();
     // invH.inv();
 
+
+    // CONSTRUCTION OF HOMOGRAPHY CORNERS
     Mat corners = Mat(3,4,CV_64FC1);
     corners.at<double>(0,0) = 0;
     corners.at<double>(0,1) = size;
@@ -564,10 +569,10 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat homographyCorners = invH*corners;
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
-    double minX, minY, maxX, maxY;
-    minMaxLoc(homographyCorners.row(0),&minX, &maxX);
-    minMaxLoc(homographyCorners.row(1),&minY, &maxY);
 
+    double minX, minY, maxX, maxY;
+    minMaxLoc(homographyCorners.row(0),&minX, &maxX);  // find min and max in first row
+    minMaxLoc(homographyCorners.row(1),&minY, &maxY);  // find min and max in first row
     int width = (int)maxX - minX;
     int height = (int)maxY - minY;
     if (width > 10000 || height > 10000){
@@ -581,17 +586,20 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     if (minY < 0) {
         subY = minY;
     }
+
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
     T.at<double>(1,2) = -minY;
-    invH = T*invH;
+    invH = T*invH;  // inverse of the homography
     H = invH.clone(); // the sacred line
+    // END OF HOMOGRAPHYCORNERS FIX!!!
 
     int sizes[3] = {height, width, 3};
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(cropped, warp, H, warp.size());
+    warpPerspective(cropped, warp, H, warp.size());  // needs the inverse of the homography! (TODO: add additional parameters ???)
+    // warpAffine()  // test 
     /// Displaying images in window
     namedWindow("Warped",CV_WINDOW_NORMAL);
     resizeWindow("Warped",400,400);
