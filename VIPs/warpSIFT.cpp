@@ -366,22 +366,28 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Vector is from normal plane to camera plane. Easily reversed
     double c2[3];
     double distance[3];
+    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat point_global = Mat(3,1,CV_64FC1, smp.point);
+
+    Mat point_in_C1 = Mat::zeros(3,1,CV_64FC1); 
+    point_in_C1 = R1*point_global;
+
+
+    double z_point = point_in_C1.at<double>(2,0);
+    double s_w = s->Sift.size * z_point / c.focalLength;
+    double z_vip = s_w / s->Sift.size;
+
     for (int i = 0; i < 3; i++){
-        distance[i] = c.center[i] - smp.point[i];
-    }
-    double d = sqrt(distance[0]*distance[0]+distance[1]*distance[1] + distance[2]*distance[2]);
-    for (int i = 0; i < 3; i++){
-        c2[i] = smp.point[i] + smp.normal[i];
+        c2[i] = smp.point[i] + smp.normal[i]*z_vip;
         // c2[i] = smp.normal[i]*smp.point[i];
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
-    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
     Mat t = R1*(C2-C1);
 
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
-        }
+        }   
 
 }
 
@@ -559,7 +565,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     corners.at<double>(2,2) = 1;
     corners.at<double>(2,3) = 1;
 
-    Mat homographyCorners = invH*corners;
+    Mat homographyCorners = H*corners;
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
     double minX, minY, maxX, maxY;
@@ -582,6 +588,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
     T.at<double>(1,2) = -minY;
+    cout << "H before multipled with T: " << H << endl;
+    cout << "T with corners: " << T << endl << endl;
+    // H = T*H;
     invH = T*invH;
     H = invH.clone(); // the sacred line
 
@@ -589,7 +598,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(cropped, warp, H, warp.size());
+    warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
 }
