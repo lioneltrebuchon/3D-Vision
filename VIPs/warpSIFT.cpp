@@ -620,6 +620,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
+    
     warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
