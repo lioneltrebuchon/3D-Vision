@@ -517,13 +517,12 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     // [C2 Intrinsic] - define
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
-    K2.at<double>(0,0) = c.focalLength; // c.focalLength;
-    K2.at<double>(1,1) = c.focalLength; // c.focalLength;
-    K2.at<double>(2,2) = -1;// homogeneous coord. 3d (world) -> 2d (pixel)
+    K2.at<double>(0,0) = 1; // c.focalLength;
+    K2.at<double>(1,1) = 1; // c.focalLength;
+    K2.at<double>(2,2) = 0;// homogeneous coord. 3d (world) -> 2d (pixel)
     K2.at<double>(0,2) = x/2;
     K2.at<double>(1,2) = y/2;
     // [C2 Intrinsic] - end
-
     // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
     H = K2*H; 
