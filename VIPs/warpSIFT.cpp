@@ -369,11 +369,21 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Vector is from normal plane to camera plane. Easily reversed
     double c2[3];
     double distance[3];
+<<<<<<< HEAD
+    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat point_global = Mat(3,1,CV_64FC1, smp.point);
+
+    Mat point_in_C1 = Mat::zeros(3,1,CV_64FC1); 
+    point_in_C1 = R1*point_global;
+
+
+=======
     Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
     Mat point_global = Mat(3,1,CV_64FC1, smp.point);
 
     Mat point_in_C1 = Mat::zeros(3,1,CV_64FC1); 
     point_in_C1 = R_C1W*point_global;
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
     double z_point = point_in_C1.at<double>(2,0);
     double s_w = s->Sift.size * z_point / c.focalLength;
     double z_vip = s_w / s->Sift.size;
@@ -384,12 +394,19 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
+<<<<<<< HEAD
+    Mat t = R1*(C2-C1);
+=======
     Mat t = R_C1W*(C2-C1);
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
 
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
         }   
+<<<<<<< HEAD
+=======
 
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
 
 }
 
@@ -568,7 +585,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     corners.at<double>(2,2) = 1;
     corners.at<double>(2,3) = 1;
 
-    Mat homographyCorners = invH*corners;
+    Mat homographyCorners = H*corners;
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
 
@@ -591,8 +608,11 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
-    T.at<double>(1,2) = -minY
-;    invH = T*invH;  // inverse of the homography
+    T.at<double>(1,2) = -minY;
+    cout << "H before multipled with T: " << H << endl;
+    cout << "T with corners: " << T << endl << endl;
+    // H = T*H;
+    invH = T*invH;
     H = invH.clone(); // the sacred line
     // END OF HOMOGRAPHYCORNERS FIX!!!
 
@@ -600,18 +620,8 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(cropped, warp, H, warp.size());  // needs the inverse of the homography! (TODO: add additional parameters ???)
-    // warpAffine()  // test 
-    /// Displaying images in window
-    namedWindow("Warped",CV_WINDOW_NORMAL);
-    resizeWindow("Warped",400,400);
-    namedWindow("Original",CV_WINDOW_NORMAL);
-    moveWindow("Original",400,100);
-    resizeWindow("Original",400,400);
-    imshow("Original",cropped);
-    imshow("Warped",warp);
-    cv::waitKey(0);
-
+    
+    warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
 }
