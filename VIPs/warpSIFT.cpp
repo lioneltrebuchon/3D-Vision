@@ -35,7 +35,7 @@ class Camera
       double focalLength; 
       double quaternion[4]; 
       double center[3];
-      double radialDistortion;
+      double radialDistortion; // fish-eye etc...
       vector<SiftFeature> SiftVector; 
 };
 
@@ -47,7 +47,7 @@ public:
     double translation[3];
     double rotation[3][3];
     double H[3][3];
-    double R1[3][3];
+    double R_C1W[3][3];
 };
 
 class sparseModelPoint{
@@ -77,7 +77,7 @@ static inline int IsValidFeatureName(int value)
     return value == SIFT_NAME || value == MSER_NAME;
 }
 
-vector<SiftFeature> readSIFT(string filename, int index);
+vector<SiftFeature> readSIFT(string filename, int index);  // ???
 void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp);
 void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]);
@@ -92,6 +92,7 @@ Mat MakeRotationMatrix(sparseModelPoint smp);
 Compile command: (Probably don't need all the OpenCV libraries listed here)
 g++ warpSIFT.cpp -I/path/to/ann_1.1.2/include -L/path/to/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core
 Lio: g++ -std=c++11  warpSIFT.cpp -I/home/lionelt/ann_1.1.2/include -L/home/lionelt/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_shape -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core
+g++ -std=c++11  warpSIFT.cpp -I/home/lionelt/ann_1.1.2/include -L/home/lionelt/ann_1.1.2/lib -lANN -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib-lopencv_core
 
 
 To run, something like that:
@@ -176,7 +177,7 @@ int main(int argc, char **argv)
     // Read in dense model for use in nearest neighbour calculations later
     ANNpointArray densePts = annAllocPts(maxPoints, 3);
     double eps = 0.01;
-    int k = 5;  //was 5 before 
+    int k = 5;  //was 5 before   ???
     int dim = 3;
     ANNidxArray nnIdx = new ANNidx[k];
     ANNdistArray dists = new ANNdist[k]; 
@@ -202,7 +203,7 @@ int main(int argc, char **argv)
             check=0;
         }
     }
-    ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim);
+    ANNkd_tree* kdTree = new ANNkd_tree(densePts, numPoints, dim); // ??? + where is nearest neighbor search???
     denseStream.close();
 
 
@@ -261,6 +262,8 @@ int main(int argc, char **argv)
         int numSift = stoi(ns);
         vector<sparseSiftFeature> sparseSifts(numSift);
         cout << "Point" << i << ": (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
+
+        // CREATION OF VIP
         for (int j = 0; j < numSift; j++){
             sparseSiftFeature ssf;
             ss >> ns;
@@ -292,12 +295,12 @@ int main(int argc, char **argv)
         }
         smp.features = sparseSifts;
         sparsePoints[i] = smp;
-    }
+    }   // END OF VIP
+
     sparseStream.close();
 
     // Every point in sparsePoints should now have a list of VIPs
-    // TODO: Get rid of extra information
-
+    // Get rid of extra information
     delete [] nnIdx;
     delete [] dists;
     delete kdTree;
@@ -366,6 +369,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Vector is from normal plane to camera plane. Easily reversed
     double c2[3];
     double distance[3];
+<<<<<<< HEAD
     Mat R1 = Mat(3,3,CV_64FC1, s->R1);
     Mat point_global = Mat(3,1,CV_64FC1, smp.point);
 
@@ -373,6 +377,13 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     point_in_C1 = R1*point_global;
 
 
+=======
+    Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
+    Mat point_global = Mat(3,1,CV_64FC1, smp.point);
+
+    Mat point_in_C1 = Mat::zeros(3,1,CV_64FC1); 
+    point_in_C1 = R_C1W*point_global;
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
     double z_point = point_in_C1.at<double>(2,0);
     double s_w = s->Sift.size * z_point / c.focalLength;
     double z_vip = s_w / s->Sift.size;
@@ -383,11 +394,19 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }  
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
+<<<<<<< HEAD
     Mat t = R1*(C2-C1);
+=======
+    Mat t = R_C1W*(C2-C1);
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
 
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
         }   
+<<<<<<< HEAD
+=======
+
+>>>>>>> 96a0a79e337c17ab92ab652b32b59686670e9631
 
 }
 
@@ -396,7 +415,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // Turning quaternion to rotation matrix: https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion
     // Confirmation: https://groups.google.com/forum/#!topic/vsfm/V4lhITH2yHw
     double to_camera[3][3];
-    double w = c.quaternion[0];
+    double w = c.quaternion[0];  // order right!
     double x = c.quaternion[1];
     double y = c.quaternion[2];
     double z = c.quaternion[3];
@@ -420,13 +439,14 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     vec2 = vec1.cross(X);
     vec2 = vec2/norm(vec2);
 
-    Mat R2 = Mat::zeros(3,3,CV_64FC1);
-    R2.row(0) = vec1.t();
-    R2.row(1) = vec2.t();
-    R2.row(2) = X.t();
+    Mat R_C2W = Mat::zeros(3,3,CV_64FC1);
+    R_C2W.row(0) = vec1.t();
+    R_C2W.row(1) = vec2.t();
+    R_C2W.row(2) = X.t();
 
-    Mat R1 = Mat(3,3,CV_64FC1,to_camera);
-    R1 = R1.t();
+    Mat R_C1W = Mat(3,3,CV_64FC1,to_camera);
+    // TODO: UNDERSTAND WHICH FINAL TRANSPOSE TO USE
+    // R_C1W = R_C1W.t();
     // cout << "toCamera:" << XY_to_camera << "\n";
     // Mat trans = Mat(3,1,CV_64FC1,s->translation);
     // trans = XY_to_camera*trans;
@@ -434,16 +454,16 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     // cout << "toXY:" << Normal_to_XY << "\n";
     // Mat rot = XY_to_camera*Normal_to_XY;
     // // rot = rot.inv();
-    Mat R = R2*R1.t();
+    Mat R = R_C2W*R_C1W.t();
 
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++){
             s->rotation[i][j] = R.at<double>(i,j);
-            s->R1[i][j] = R1.at<double>(i,j);
+            s->R_C1W[i][j] = R_C1W.at<double>(i,j);
         }
     }
 
-    // cout << "Rotation: " << rot << "\n";
+    //cout << "Rotation: " << rot << "\n";
     
 }
 
@@ -463,16 +483,16 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     up.at<double>(0,2) = 1;
     
     Mat R = Mat(3,3,CV_64FC1, s->rotation);
-    Mat R1 = Mat(3,3,CV_64FC1, s->R1);
+    Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
     Mat t = Mat(3,1,CV_64FC1, s->translation);
     Mat n = Mat(3,1,CV_64FC1, normal);
     Mat c1 = Mat(3,1,CV_64FC1, c.center);
 
     Mat d1 = Mat::zeros(3,3,CV_64FC1);
-    d1 = (R1*n).t()*R1*f;
+    d1 = (R_C1W*n).t()*R_C1W*f;
     double d1f = d1.at<double>(0,0);
 
-    Mat H = (R+R*t*(((R1*n).t())/d1f))*K1.inv();
+    Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
     cout << "t " << t <<endl;
     cout << "H " << H <<endl;
     // Mat H = (R+R*t*n.t());
@@ -491,17 +511,12 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
 }
 
 void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchName){
-    // Treating the size of the patch as 10*size of sift feature
-    int size = s->Sift.size*10;
+    int size = s->Sift.size*10; //size of patch = 10* size of sift
     Mat image, cropped;
-    // Read the image
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
     // Crop the image to the SIFT patch (coordinate system from upper left corner)
     int w = image.cols;
     int h = image.rows;
-
-    
-
     int x = s->Sift.point[0] - size/2;
     int y = s->Sift.point[1] - size/2;
     if (x < 0) {
@@ -531,15 +546,18 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // K1.at<double>(1,2) = y/2;
     cropped = image(Rect(x, y, size, size));
 
+    // CALCULATION OF H (WARP, HOMOGRAPHY MATRIX)
     // Warp the image
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
-    K2.at<double>(0,0) = c.focalLength;
-    K2.at<double>(1,1) = c.focalLength;
-    K2.at<double>(2,2) = 1;
+    K2.at<double>(0,0) = c.focalLength; // c.focalLength;
+    K2.at<double>(1,1) = c.focalLength; // c.focalLength;
+    K2.at<double>(2,2) = -1;// homogeneous coord. 3d (world) -> 2d (pixel)
     K2.at<double>(0,2) = x/2;
     K2.at<double>(1,2) = y/2;
     Mat H = Mat(3,3,CV_64FC1,s->H);
     H = K2*H;
+    // END OF HOMOGRAPHY
+
     // H = H.inv();
     // H = H*K1.inv();
 
@@ -551,6 +569,8 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat invH = H.clone().inv();
     // invH.inv();
 
+
+    // CONSTRUCTION OF HOMOGRAPHY CORNERS
     Mat corners = Mat(3,4,CV_64FC1);
     corners.at<double>(0,0) = 0;
     corners.at<double>(0,1) = size;
@@ -568,10 +588,10 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat homographyCorners = H*corners;
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
-    double minX, minY, maxX, maxY;
-    minMaxLoc(homographyCorners.row(0),&minX, &maxX);
-    minMaxLoc(homographyCorners.row(1),&minY, &maxY);
 
+    double minX, minY, maxX, maxY;
+    minMaxLoc(homographyCorners.row(0),&minX, &maxX);  // find min and max in first row
+    minMaxLoc(homographyCorners.row(1),&minY, &maxY);  // find min and max in first row
     int width = (int)maxX - minX;
     int height = (int)maxY - minY;
     if (width > 10000 || height > 10000){
@@ -585,6 +605,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     if (minY < 0) {
         subY = minY;
     }
+
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
     T.at<double>(1,2) = -minY;
@@ -593,6 +614,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // H = T*H;
     invH = T*invH;
     H = invH.clone(); // the sacred line
+    // END OF HOMOGRAPHYCORNERS FIX!!!
 
     int sizes[3] = {height, width, 3};
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
