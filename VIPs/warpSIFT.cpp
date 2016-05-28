@@ -320,7 +320,7 @@ vector<SiftFeature> readSIFT(string file_name, int index){
     fs.read((char *)&name, sizeof(int));
     fs.read((char *)&version, sizeof(int));
     if(IsValidFeatureName(name) && IsValidVersionName(version)) {
-        fs.read((char *)&npoint, sizeof(int));
+        fs.read((char *) &npoint, sizeof(int));
         fs.read((char *) &nLocDim, sizeof(int));
         fs.read((char *) &nDesDim, sizeof(int));
         vector<SiftFeature> features(npoint);
@@ -371,17 +371,15 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     double distance[3];
     Mat R_C1W = Mat(3,3,CV_64FC1, s->R_C1W);
     Mat point_global = Mat(3,1,CV_64FC1, smp.point);
-
     Mat point_in_C1 = Mat::zeros(3,1,CV_64FC1); 
-    point_in_C1 = R_C1W*point_global;
+    point_in_C1 = R_C1W * point_global;
     double z_point = point_in_C1.at<double>(2,0);
     double s_w = s->Sift.size * z_point / c.focalLength;
     double z_vip = s_w / s->Sift.size;
-
     for (int i = 0; i < 3; i++){
         c2[i] = smp.point[i] + smp.normal[i]*z_vip;
-        // c2[i] = smp.normal[i]*smp.point[i];
     }  
+    
     Mat C1 = Mat(3,1,CV_64FC1,c.center);
     Mat C2 = Mat(3,1,CV_64FC1,c2); 
     Mat t = R_C1W*(C2-C1);
@@ -389,8 +387,6 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
         }   
-
-
 }
 
 // TODO: I can't math D:
@@ -497,63 +493,49 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     int size = s->Sift.size*10; //size of patch = 10* size of sift
     Mat image, cropped;
     image = imread(imageName, CV_LOAD_IMAGE_COLOR);
-    // Crop the image to the SIFT patch (coordinate system from upper left corner)
+    // [Image] - Crop the image to the SIFT patch (coordinate system from upper left corner)
     int w = image.cols;
     int h = image.rows;
     int x = s->Sift.point[0] - size/2;
     int y = s->Sift.point[1] - size/2;
-    if (x < 0) {
-        x = 0;
-    }
-    if (x+size >= w) {
-        x = w - size - 1;
-    }
-    if (x < 0) {
-        x = 0;
-        size = w-1;
-    }
-    if (y < 0) {
-        y = 0;
-    }
-    if (y+size >= h) {
-        y = h - size - 1;
-    }
-    if (y < 0) {
-        y = 0;
-    }
+    if (x < 0) {x = 0;}
+    if (x+size >= w) {x = w - size - 1;}
+    if (x < 0) {x = 0;size = w-1;}
+    if (y < 0) {y = 0;}
+    if (y+size >= h) {y = h - size - 1;}
+    if (y < 0) {y = 0;}
+    cropped = image(Rect(x, y, size, size));
+
+    // [C1 Intrinsics] - changing them (Why ??? )
     // Mat K1 = Mat::zeros(3,3,CV_64FC1);
     // K1.at<double>(0,0) = 1.2;
     // K1.at<double>(1,1) = 1.2;
     // K1.at<double>(2,2) = 1;
     // K1.at<double>(0,2) = x/2;
     // K1.at<double>(1,2) = y/2;
-    cropped = image(Rect(x, y, size, size));
+    // [C1 Intrinsics] - end
 
-    // CALCULATION OF H (WARP, HOMOGRAPHY MATRIX)
-    // Warp the image
+    // [C2 Intrinsic] - define
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
     K2.at<double>(0,0) = c.focalLength; // c.focalLength;
     K2.at<double>(1,1) = c.focalLength; // c.focalLength;
     K2.at<double>(2,2) = -1;// homogeneous coord. 3d (world) -> 2d (pixel)
     K2.at<double>(0,2) = x/2;
     K2.at<double>(1,2) = y/2;
+    // [C2 Intrinsic] - end
+
+    // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
-    H = K2*H;
-    // END OF HOMOGRAPHY
-
-    // H = H.inv();
+    H = K2*H; 
     // H = H*K1.inv();
-
     // Mat S = Mat::eye(3,3,CV_64F);
     // S.at<double>(0,0) = size;
     // S.at<double>(1,1) = size;
     // H = S*H*S.inv();
-    // H = H.inv();
     Mat invH = H.clone().inv();
-    // invH.inv();
+    // [Homography] - end
 
-
-    // CONSTRUCTION OF HOMOGRAPHY CORNERS
+    // [Homography] - CONSTRUCTION OF HOMOGRAPHY CORNERS
     Mat corners = Mat(3,4,CV_64FC1);
     corners.at<double>(0,0) = 0;
     corners.at<double>(0,1) = size;
@@ -563,12 +545,13 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     corners.at<double>(1,1) = 0;
     corners.at<double>(1,2) = size;
     corners.at<double>(1,3) = size;
+    // [Homography] - corners are 1 (see [Homography] - scaling)
     corners.at<double>(2,0) = 1;
     corners.at<double>(2,1) = 1;
     corners.at<double>(2,2) = 1;
     corners.at<double>(2,3) = 1;
-
     Mat homographyCorners = invH*corners;
+    // [Homography] - scaling
     homographyCorners.row(0) = homographyCorners.row(0)/homographyCorners.row(2);
     homographyCorners.row(1) = homographyCorners.row(1)/homographyCorners.row(2);
 
@@ -600,7 +583,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(cropped, warp, H, warp.size());  // needs the inverse of the homography! (TODO: add additional parameters ???)
+    warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
     // warpAffine()  // test 
     /// Displaying images in window
     namedWindow("Warped",CV_WINDOW_NORMAL);
