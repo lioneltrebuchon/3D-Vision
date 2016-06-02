@@ -1,0 +1,65 @@
+%% Circle generation
+sz=400;
+rad=100;
+clear RGB
+RGB(1:sz,1:sz,1:3)=255;
+[x y]= find(RGB==255);
+xc=ceil((sz+1)/2);
+yc=ceil((sz+1)/2);
+
+r=rad.^2;
+d=find(((x-xc).^2+(y-yc).^2) <= r);
+for i=1:size(d,1)
+      
+    RGB(x(d(i)),y(d(i)),:)=0;
+      
+end
+
+B=rgb2gray(RGB);
+
+ED=edge(B);
+SE=strel('disk',1);
+cir=~imdilate(ED,SE);
+
+cir(3:10,3:10) = 0;
+
+figure(1),imshow(cir);
+
+
+%% homogenious transform
+clear image_final;
+theta = 50;
+R = [cosd(theta) -sind(theta) 0;
+     sind(theta) cosd(theta)  0;
+     0          0           1];
+ 
+R = [1 0 0;
+    0 cosd(theta) -sind(theta);
+    0 sind(theta) cosd(theta)]
+T = [-200;-200;400];
+
+K = [400 0 200;
+     0 400 200;
+     0 0 1];
+H = K*[R,T];
+
+
+for i=1:1:400
+    for j=1:1:400
+        z = 0;
+        point = [i;j;z;1];
+        point_new = H * point;
+        u_coord = round(point_new(1)/point_new(3));
+        v_coord = round(point_new(2)/point_new(3));
+        %if((u_coord > 0 && u_coord < 400) && (v_coord > 0 && v_coord < 400))
+        image_final(u_coord,v_coord) = cir(i,j);
+        %end
+        
+    end
+    i
+end
+figure(2)
+imshow(image_final);
+            
+
+
