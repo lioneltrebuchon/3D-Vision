@@ -24,18 +24,21 @@ cir=~imdilate(ED,SE);
 cir(3:10,3:10) = 0;
 
 figure(1),imshow(cir);
+imwrite(cir,'/Users/markopanjek/Documents/DOKUMENTI/Sola/ETH/3D_Vision/semester_project/circle_original.jpeg');
+
 
 
 %% homogenious transform
 clear image_final;
 theta = 50;
-R = [cosd(theta) -sind(theta) 0;
-     sind(theta) cosd(theta)  0;
-     0          0           1];
- 
+% R = [cosd(theta) -sind(theta) 0;
+%      sind(theta) cosd(theta)  0;
+%      0          0           1];
+
 R = [1 0 0;
     0 cosd(theta) -sind(theta);
-    0 sind(theta) cosd(theta)]
+    0 sind(theta) cosd(theta)];
+
 T = [-200;-200;400];
 
 K = [400 0 200;
@@ -60,6 +63,7 @@ for i=1:1:400
 end
 figure(2)
 imshow(image_final);
+imwrite(image_final,'/Users/markopanjek/Documents/DOKUMENTI/Sola/ETH/3D_Vision/semester_project/circle_warped.jpeg');
             
 
 
