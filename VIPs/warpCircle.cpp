@@ -217,8 +217,9 @@ int main(int argc, char **argv)
 
     vector<sparseModelPoint> sparsePoints(numSparsePoints);
     ANNpoint queryPt = annAllocPt(dim);  
+	
 
-    for (int i = 0; i < numSparsePoints; i++){
+    for (int i = 0; i < 1; i++){
         sparseStream.getline(line, 1028);
         istringstream ss(line);
         sparseModelPoint smp;
@@ -264,7 +265,7 @@ int main(int argc, char **argv)
         cout << "Point" << i << ": (" << smp.point[0] << "," << smp.point[1] << "," << smp.point[2] << "): \n";
 
         // CREATION OF VIP
-        for (int j = 0; j < numSift; j++){
+        for (int j = 0; j < 1; j++){
             sparseSiftFeature ssf;
             ss >> ns;
             int imageIndex = stoi(ns);
@@ -290,7 +291,7 @@ int main(int argc, char **argv)
             computeTranslation(cam, &ssf, smp);
             computeHomography(cam, &ssf, smp.normal);
             // a P becomes a VIP
-            createVIP(cam, siftFolder + "/" + cam.name, &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
+    		createVIP(cam, "/Users/markopanjek/Documents/DOKUMENTI/Sola/ETH/3D_Vision/semester_project/circle_warped.jpeg", &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
             sparseSifts[j] = ssf;
         }
         smp.features = sparseSifts;
@@ -380,9 +381,18 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
         c2[i] = smp.point[i] + smp.normal[i]*z_vip;
     }  
     
-    Mat C1 = Mat(3,1,CV_64FC1,c.center);
-    Mat C2 = Mat(3,1,CV_64FC1,c2); 
-    Mat t = R_C1W*(C2-C1);
+    // Mat C1 = Mat(3,1,CV_64FC1,c.center);
+    // Mat C2 = Mat(3,1,CV_64FC1,c2); 
+    Mat C1 = Mat::zeros(3,1,CV_64FC1); 
+    C1.row(0) = 200.0000;
+    C1.row(1) = 200.0000;
+    C1.row(2) = 400.0000;
+    Mat C2 = Mat::zeros(3,1,CV_64FC1); 
+    C2.row(0) = 200.0000;
+    C2.row(1) = -177.8603;
+    C2.row(2) = 410.3239;
+
+    Mat t = (C2-C1);
 
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
@@ -410,9 +420,10 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
 
     Mat vec1;
     Mat vec2;
-    Mat X = Mat(3,1,CV_64FC1,smp.normal);
+    Mat X = Mat::zeros(3,1,CV_64FC1);
+    X.col(0).row(2) = 1;
     Mat up = Mat::zeros(3,1,CV_64FC1);
-    up.col(0).row(2) = 1;
+    up.col(0).row(0) = 1;
     vec1 = X.cross(up);
     vec1 = vec1/norm(vec1);
     vec2 = vec1.cross(X);
@@ -423,7 +434,21 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     R_C2W.row(1) = vec2.t();
     R_C2W.row(2) = X.t();
 
-    Mat R_C1W = Mat(3,3,CV_64FC1,to_camera);
+
+    Mat R_C1W = Mat::zeros(3,3,CV_64FC1);
+    R_C1W.col(0).row(0) = 1;
+    R_C1W.col(1).row(0) = 0;
+    R_C1W.col(2).row(0) = 0;
+
+    R_C1W.col(0).row(1) = 0;
+    R_C1W.col(1).row(1) = 0.6428;
+    R_C1W.col(2).row(1) = -0.7660;
+
+    R_C1W.col(0).row(2) = 0;
+    R_C1W.col(1).row(2) = 0.7660;
+    R_C1W.col(2).row(2) = 0.6428;
+
+
     // TODO: UNDERSTAND WHICH FINAL TRANSPOSE TO USE
     // R_C1W = R_C1W.t();
     // cout << "toCamera:" << XY_to_camera << "\n";
@@ -451,15 +476,27 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // kinda sorta right
 
     Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    K1.at<double>(0,0) = c.focalLength;
-    K1.at<double>(1,1) = c.focalLength;
-    K1.at<double>(0,2) = -s->Sift.size*5; 
-    K1.at<double>(1,2) = -s->Sift.size*5; 
-    K1.at<double>(2,2) = 1;
+    // K1.at<double>(0,0) = c.focalLength;
+    // K1.at<double>(1,1) = c.focalLength;
+    // K1.at<double>(0,2) = -s->Sift.size*5; 
+    // K1.at<double>(1,2) = -s->Sift.size*5; 
+    // K1.at<double>(2,2) = 1;
+    K1.at<double>(0,0) = 400;
+    K1.at<double>(1,1) = 400;
+    K1.at<double>(0,2) = 0; 
+    K1.at<double>(1,2) = 0; 
+    K1.at<double>(2,2) = 0;
     cout << "K1 thingy " << K1 << endl;
 
+    Mat K2 = Mat::zeros(3,3,CV_64FC1);
+    K2.at<double>(0,0) = 400;
+    K2.at<double>(1,1) = 400;
+    K2.at<double>(0,2) = ; 
+    K2.at<double>(1,2) = ; 
+    K2.at<double>(2,2) = 1;
+
     Mat f = Mat::zeros(3,1,CV_64FC1);
-    f.at<double>(0,2) = c.focalLength;
+    f.at<double>(0,2) = 400;
 
     Mat up = Mat::zeros(3,1,CV_64FC1);
     up.at<double>(0,2) = 1;
@@ -472,9 +509,68 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
 
     Mat d1 = Mat::zeros(3,3,CV_64FC1);
     d1 = (R_C1W*n).t()*R_C1W*f;
-    double d1f = d1.at<double>(0,0);
+    double d1f = 400;
 
-    Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
+    // Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
+
+    //R_2_to_W
+    Mat R_2_to_W = Mat::zeros(3,3,CV_64FC1);
+    R_2_to_W.col(0).row(0) = 1;
+    R_2_to_W.col(1).row(0) = 0;
+    R_2_to_W.col(2).row(0) = 0;
+
+    R_2_to_W.col(0).row(1) = 0;
+    R_2_to_W.col(1).row(1) = 0.6428;
+    R_2_to_W.col(2).row(1) = -0.7660;
+
+    R_2_to_W.col(0).row(2) = 0;
+    R_2_to_W.col(1).row(2) = -0.7660;
+    R_2_to_W.col(2).row(2) = -0.6428;
+
+    //R_1_to_W
+    Mat R_1_to_W = Mat::zeros(3,3,CV_64FC1);
+    R_1_to_W.col(0).row(0) = 1;
+    R_1_to_W.col(1).row(0) = 0;
+    R_1_to_W.col(2).row(0) = 0;
+
+    R_1_to_W.col(0).row(1) = 0;
+    R_1_to_W.col(1).row(1) = 1;
+    R_1_to_W.col(2).row(1) = 0;
+
+    R_1_to_W.col(0).row(2) = 0;
+    R_1_to_W.col(1).row(2) = 0;
+    R_1_to_W.col(2).row(2) = -1;
+
+	Mat R_1_to_2 = Mat::zeros(3,3,CV_64FC1);
+    R_1_to_2= R_2_to_W.inv() * R_1_to_W; 
+
+
+    Mat C1 = Mat::zeros(3,1,CV_64FC1); 
+    C1.row(0) = 200.0000;
+    C1.row(1) = 200.0000;
+    C1.row(2) = 400.0000;
+    Mat C2 = Mat::zeros(3,1,CV_64FC1); 
+    C2.row(0) = 200.0000;
+    C2.row(1) = -177.8603;
+    C2.row(2) = 410.3239;
+
+    //translation
+    Mat trans = R_1_to_W.inv()*(C2-C1);
+    Mat normal_v = Mat::zeros(3,1,CV_64FC1); 
+    normal_v.row(2) = 1;
+
+// d factor
+    Mat d_v = Mat::zeros(3,3,CV_64FC1);
+    //d_v = (R_1_to_W.inv()*normal_v).t()*R_1_to_W.inv();
+    double d_vf1= 410;
+    // double d_vf1 = d_v.at<double>(0,0);
+    // double d_vf2 = d_v.at<double>(1,1);
+    // double d_vf3 = d_v.at<double>(2,2);
+
+cout << "factor d = " << d_v << endl;
+
+
+    Mat H = K2*(R_1_to_2 + R_1_to_2 * trans * (R_1_to_W.inv()*normal_v).t()/d_vf1)*K1.inv();
     cout << "t " << t <<endl;
     cout << "H " << H <<endl;
     // Mat H = (R+R*t*n.t());
@@ -520,16 +616,16 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     // [C2 Intrinsic] - define
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
-    K2.at<double>(0,0) = 1; // c.focalLength;
-    K2.at<double>(1,1) = 1; // c.focalLength;
-    K2.at<double>(2,2) = 0;// homogeneous coord. 3d (world) -> 2d (pixel)
-    K2.at<double>(0,2) = -size/2;
-    K2.at<double>(1,2) = -size/2;
+    K2.at<double>(0,0) = 400; // c.focalLength;
+    K2.at<double>(1,1) = 400; // c.focalLength;
+    K2.at<double>(2,2) = 1;// homogeneous coord. 3d (world) -> 2d (pixel)
+    K2.at<double>(0,2) = 200;
+    K2.at<double>(1,2) = 200;
     cout << "X half" << -x/2 << endl;
     // [C2 Intrinsic] - end
     // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
-    H = K2*H; 
+    // H = K2*H; 
     // H = H*K1.inv();
     // Mat S = Mat::eye(3,3,CV_64F);
     // S.at<double>(0,0) = size;
@@ -582,19 +678,19 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // H = invH.clone(); // the sacred line
     // END OF HOMOGRAPHYCORNERS FIX!!!
 
-    int sizes[3] = {height, width, 3};
+    int sizes[3] = {400, 400, 3};
     Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
+    warpPerspective(image, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
     // warpAffine()  // test 
     /// Displaying images in window
-    namedWindow("Warped",CV_WINDOW_NORMAL);
-    resizeWindow("Warped",400,400);
-    namedWindow("Original",CV_WINDOW_NORMAL);
+    namedWindow("Warped",WINDOW_AUTOSIZE);
+    // resizeWindow("Warped",400,400);
+    namedWindow("Original",WINDOW_AUTOSIZE);
     moveWindow("Original",400,100);
-    resizeWindow("Original",400,400);
-    imshow("Original",cropped);
+    // resizeWindow("Original",400,400);
+    imshow("Original",image);
     imshow("Warped",warp);
     cv::waitKey(0);
 

@@ -453,7 +453,10 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     Mat K1 = Mat::zeros(3,3,CV_64FC1);
     K1.at<double>(0,0) = c.focalLength;
     K1.at<double>(1,1) = c.focalLength;
+    K1.at<double>(0,2) = -s->Sift.size*5; 
+    K1.at<double>(1,2) = -s->Sift.size*5; 
     K1.at<double>(2,2) = 1;
+    cout << "K1 thingy " << K1 << endl;
 
     Mat f = Mat::zeros(3,1,CV_64FC1);
     f.at<double>(0,2) = c.focalLength;
@@ -520,8 +523,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     K2.at<double>(0,0) = 1; // c.focalLength;
     K2.at<double>(1,1) = 1; // c.focalLength;
     K2.at<double>(2,2) = 0;// homogeneous coord. 3d (world) -> 2d (pixel)
-    K2.at<double>(0,2) = x/2;
-    K2.at<double>(1,2) = y/2;
+    K2.at<double>(0,2) = -size/2;
+    K2.at<double>(1,2) = -size/2;
+    cout << "X half" << -x/2 << endl;
     // [C2 Intrinsic] - end
     // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
@@ -573,9 +577,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     Mat T = Mat::eye(3, 3, CV_64F);
     T.at<double>(0,2) = -minX;
-    T.at<double>(1,2) = -minY
-;    invH = T*invH;  // inverse of the homography
-    H = invH.clone(); // the sacred line
+    T.at<double>(1,2) = -minY;    
+    invH = T*invH;  // inverse of the homography
+    // H = invH.clone(); // the sacred line
     // END OF HOMOGRAPHYCORNERS FIX!!!
 
     int sizes[3] = {height, width, 3};
