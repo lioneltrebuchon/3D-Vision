@@ -514,70 +514,70 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
 
     //R_2_to_W
-    Mat R_2_to_W = Mat::zeros(3,3,CV_64FC1);
-    R_2_to_W.col(0).row(0) = 1;
-    R_2_to_W.col(1).row(0) = 0;
-    R_2_to_W.col(2).row(0) = 0;
+    Mat R_W_to_1 = Mat::zeros(3,3,CV_64FC1);
+    R_W_to_1.col(0).row(0) = 1;
+    R_W_to_1.col(1).row(0) = 0;
+    R_W_to_1.col(2).row(0) = 0;
 
-    R_2_to_W.col(0).row(1) = 0;
-    R_2_to_W.col(1).row(1) = 0.6428;
-    R_2_to_W.col(2).row(1) = 0.7660;
+    R_W_to_1.col(0).row(1) = 0;
+    R_W_to_1.col(1).row(1) = 0.6428;
+    R_W_to_1.col(2).row(1) = -0.7660;
 
-    R_2_to_W.col(0).row(2) = 0;
-    R_2_to_W.col(1).row(2) = -0.7660;
-    R_2_to_W.col(2).row(2) = 0.6428;
+    R_W_to_1.col(0).row(2) = 0;
+    R_W_to_1.col(1).row(2) = 0.7660;
+    R_W_to_1.col(2).row(2) = 0.6428;
 
     //R_1_to_W
-    Mat R_1_to_W = Mat::zeros(3,3,CV_64FC1);
-    R_1_to_W.col(0).row(0) = 1;
-    R_1_to_W.col(1).row(0) = 0;
-    R_1_to_W.col(2).row(0) = 0;
+    Mat R_W_to_2 = Mat::zeros(3,3,CV_64FC1);
+    R_W_to_2.col(0).row(0) = 1;
+    R_W_to_2.col(1).row(0) = 0;
+    R_W_to_2.col(2).row(0) = 0;
 
-    R_1_to_W.col(0).row(1) = 0;
-    R_1_to_W.col(1).row(1) = 1;
-    R_1_to_W.col(2).row(1) = 0;
+    R_W_to_2.col(0).row(1) = 0;
+    R_W_to_2.col(1).row(1) = 1;
+    R_W_to_2.col(2).row(1) = 0;
 
-    R_1_to_W.col(0).row(2) = 0;
-    R_1_to_W.col(1).row(2) = 0;
-    R_1_to_W.col(2).row(2) = 1;
+    R_W_to_2.col(0).row(2) = 0;
+    R_W_to_2.col(1).row(2) = 0;
+    R_W_to_2.col(2).row(2) = 1;
 
 	Mat R_1_to_2 = Mat::zeros(3,3,CV_64FC1);
-    R_1_to_2= R_1_to_W.inv() *R_2_to_W; 
+    R_1_to_2= R_W_to_2 *R_W_to_1.inv(); 
 
 
-    Mat C1 = Mat::zeros(3,1,CV_64FC1); 
-    C1.row(0) = 200.0000;
-    C1.row(1) = 200.0000;
-    C1.row(2) = -400.0000;
     Mat C2 = Mat::zeros(3,1,CV_64FC1); 
     C2.row(0) = 200.0000;
-    C2.row(1) = -177.8603;
-    C2.row(2) = -410.3239;
+    C2.row(1) = 200.0000;
+    C2.row(2) = -400.0000;
+    Mat C1 = Mat::zeros(3,1,CV_64FC1); 
+    C1.row(0) = 200.0000;
+    C1.row(1) = -177.8603;
+    C1.row(2) = -410.3239;
 
     // recreation of R
 
 
     //translation
-    Mat trans = R_2_to_W.inv()*(C1-C2);
+    Mat trans = R_W_to_1*(C2-C1);
     Mat normal_v = Mat::zeros(3,1,CV_64FC1); 
     normal_v.row(2) = -1;
 
 // d factor
     Mat d_v = Mat::zeros(1,1,CV_64FC1);
     Mat point = Mat::zeros(3,1,CV_64FC1); 
-    Mat normal_v2 = R_2_to_W.inv()*normal_v; 
-    d_v = abs(normal_v2.t()*R_2_to_W.inv()*(point-C2));
+    Mat normal_v1 = R_W_to_1*normal_v; 
+    d_v = abs(normal_v1.t()*R_W_to_1*(point-C1));
 
 
 cout << "factor d = " << d_v << endl;
 cout << "normal = " << normal_v << endl;
-cout << "R_2_to_W = " << R_2_to_W << endl;
-cout << "factor R_1_to_W = " << R_1_to_W << endl;
+cout << "R_2_to_W = " << R_W_to_2 << endl;
+cout << "factor R_1_to_W = " << R_W_to_1 << endl;
 cout << "factor R_1_to_2 = " << R_1_to_2 << endl;
 cout << "factor K1 = " << K1 << endl;
 cout << "factor K2 = " << K2 << endl;
 
-    Mat H = K2*(R_1_to_2 + R_1_to_2 * trans * (R_2_to_W.inv()*normal_v2).t()/d_v)*K1.inv();
+    Mat H = K2*(R_1_to_2 + R_1_to_2 * trans * (normal_v1).t()/d_v)*K1.inv();
     cout << "t " << t <<endl;
     cout << "H " << H <<endl;
     // Mat H = (R+R*t*n.t());
