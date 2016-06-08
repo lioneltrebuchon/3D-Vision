@@ -291,7 +291,10 @@ int main(int argc, char **argv)
             computeTranslation(cam, &ssf, smp);
             computeHomography(cam, &ssf, smp.normal);
             // a P becomes a VIP
-    		createVIP(cam, "/Users/markopanjek/Documents/DOKUMENTI/Sola/ETH/3D_Vision/semester_project/circle_warped.jpeg", &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
+    		// Lionel:createVIP(cam, "/home/lionelt/3D_vision_pollefeys/circle_warped.jpeg", &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
+            // PLEASE DON'T EDIT BEFORE HAVING PULLED THE LATEST CHANGES, I am getting maaad restoring my stuff everytime.
+            // Also beware of the stuff you push XD
+            createVIP(cam, "../circle_warped.jpeg", &ssf, "Point"+to_string(i)+"Sift"+to_string(j));
             sparseSifts[j] = ssf;
         }
         smp.features = sparseSifts;
