@@ -119,6 +119,10 @@ for i=1:1:400
         u_coord = round(point_new(1)/point_new(3));
         v_coord = round(point_new(2)/point_new(3));
         if((u_coord > 2 && u_coord < maxX-1) && (v_coord > 2 && v_coord < maxY-1))
+            
+            % Applying Gaussian blur following: http://stackoverflow.com/questions/20746172/blur-an-image-using-3x3-gaussian-kernel
+            % For more pixels: http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
+            % But what we need is actually bilinear interpolation.
         image_unwarped(i,j) = 1/16*image_final(u_coord-1,v_coord-1)+...
         1/8*image_final(u_coord,v_coord-1)+...
         1/16*image_final(u_coord+1,v_coord-1)+...
