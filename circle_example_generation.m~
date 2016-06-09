@@ -111,24 +111,16 @@ H = [1, -0.373383055017823, 0.0085315077195105;
  0, 0.9748836410988672, -0.01861046434370905;
  0, -0.001866915275089115, 1.000042657538598];
 
-[maxX,maxY]= size(image_final);
 for i=1:1:400
     for j=1:1:400
         point = [i;j;1];
         point_new = inv(H) * point;
         u_coord = round(point_new(1)/point_new(3));
         v_coord = round(point_new(2)/point_new(3));
-        if((u_coord > 2 && u_coord < maxX-1) && (v_coord > 2 && v_coord < maxY-1))
-        image_unwarped(i,j) = 1/16*image_final(u_coord-1,v_coord-1)+...
-        1/8*image_final(u_coord,v_coord-1)+...
-        1/16*image_final(u_coord+1,v_coord-1)+...
-        1/8*image_final(u_coord-1,v_coord)+...
-        1/4*image_final(u_coord,v_coord)+...
-    1/8*image_final(u_coord+1,v_coord)+...
-    1/16*image_final(u_coord-1,v_coord+1)+...
-    1/8*image_final(u_coord,v_coord+1)+...
-    1/16*image_final(u_coord+1,v_coord+1);
-        end
+        %if((u_coord > 0 && u_coord < 400) && (v_coord > 0 && v_coord < 400))
+        image_unwarped(i,j) = 1/16*image_final(u_coord-1,v_coord-1)+
+        1/16*image_final(u_coord-1,v_coord-1);
+        %end
         
     end
 end

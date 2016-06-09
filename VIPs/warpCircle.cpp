@@ -688,11 +688,38 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // H = invH.clone(); // the sacred line
     // END OF HOMOGRAPHYCORNERS FIX!!!
 
+
+// MANUAL IMPLEMENTATION
     int sizes[3] = {400, 400, 3};
-    Mat warp(3, sizes, CV_8UC(1), Scalar::all(0));
+    Mat warp(400, 400, CV_8UC3, Scalar::all(0));
+    Mat point = Mat(3,1,CV_64FC1);
+    Mat point_new;
+    int u_coord;
+    int v_coord;
+    double test = 0;
+
+    cout << "Size of warp" << image.size() << endl;
+    cout << "Type of warp" << image.type() << endl;
+
+    for (int i=0; i< 400; i++){
+        for (int j=0; j< 400; j++){
+            point.row(0)=i;
+            point.row(1)=j;
+            point.row(2)=1;
+            point_new = H.inv() * point;
+//            cout << point_new.at<double>(1) << endl;
+            // test = point_new.row(0)/point_new.row(2);
+            u_coord = round( point_new.at<double>(0)/point_new.at<double>(2));
+            // cout << "after u_coord" << u_coord << endl;
+            v_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
+            warp.at<Vec3b>(i,j)= image.at<Vec3b>(u_coord,v_coord);
+        }
+    }
+cout << "end" << endl;
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
-    warpPerspective(image, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
+
+    // warpPerspective(image, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
     // warpAffine()  // test 
     /// Displaying images in window
     namedWindow("Warped",WINDOW_AUTOSIZE);
@@ -762,6 +789,7 @@ Mat MakeRotationMatrix(sparseModelPoint smp) {
 
     return R;
 }
+
 
 
 
