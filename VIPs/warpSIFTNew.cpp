@@ -432,15 +432,37 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     to_camera[2][1] = 2*y*z + 2*x*w;
     to_camera[2][2] = 1 - 2*x*x - 2*y*y;
 
-    Mat vec1;
+    Mat vec1, vec1N;
     Mat vec2;
+    Mat vecCos;
     Mat X = Mat(3,1,CV_64FC1,smp.normal);
     // X.col(0).row(2) = 1;
     Mat up = Mat::zeros(3,1,CV_64FC1);
     // up.col(0).row(0) = 1;
     up.col(0).row(2) = 1;
     vec1 = X.cross(up);
-    vec1 = vec1/norm(vec1);
+    vec1N = vec1/norm(vec1);
+    vCos= X*up.t();
+    Mat Identity = Mat::eye(3,3,CV_64FC1);
+    double vCross[3][3];
+    // TODO - give universal names, like 
+    // vSin instead of vec1N
+    // vUp instead of up
+    // Following comes from: http://math.stackexchange.com/questions/180418/calculate-rotation-matrix-to-align-vector-a-to-vector-b-in-3d
+    // Formula for rotation matrix between two vectors.
+    vCross[0][0] = 0;
+    vCross[0][0] = -vec1.at<double>(2);
+    vCross[0][0] = vec1.at<double>(1);
+    vCross[0][0] = vec1.at<double>(2);
+    vCross[0][0] = 0;
+    vCross[0][0] = -vec1.at<double>(0);
+    vCross[0][0] = -vec1.at<double>(1);
+    vCross[0][0] =  vec1.at<double>(0);
+    vCross[0][0] = 0;
+
+// TODO - Here is where I was stuck (Lio)
+    // Mat R = Identity+ vCross+ vCross*vCross *(1-vCos)/vec1N;
+
     vec2 = vec1.cross(X);
     vec2 = vec2/norm(vec2);
 
@@ -488,6 +510,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     cout << "K1 thingy " << K1 << endl;
 
     Mat K2 = K1;
+    Mat R_W_to_1 = s->R_C1W;
 
     Mat f = Mat::zeros(3,1,CV_64FC1);
     f.at<double>(0,2) = c.focalLength;
@@ -507,7 +530,6 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
 
     // Mat H = (R+R*t*(((R_C1W*n).t())/d1f))*K1.inv();
 
-    // //R_2_to_W
     // Mat R_W_to_1 = Mat::zeros(3,3,CV_64FC1);
     // R_W_to_1.col(0).row(0) = 1;
     // R_W_to_1.col(1).row(0) = 0;
@@ -521,7 +543,6 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     // R_W_to_1.col(1).row(2) = 0.7660;
     // R_W_to_1.col(2).row(2) = 0.6428;
 
-    // //R_1_to_W
     Mat R_W_to_2 = Mat::zeros(3,3,CV_64FC1);
     R_W_to_2.col(0).row(0) = 1;
     R_W_to_2.col(1).row(0) = 0;
