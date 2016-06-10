@@ -656,9 +656,3 @@ Mat MakeRotationMatrix(sparseModelPoint smp) {
 
     return R;
 }
-
-
-
-
-
-
