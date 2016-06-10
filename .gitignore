@@ -16,3 +16,4 @@ a.out
 *.
 *.pack
 dense3.nvm.cmvs/*
+*.m~
