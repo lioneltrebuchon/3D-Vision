@@ -479,7 +479,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], double 
     // kinda sorta right
     // int size = s->Sift.size; //size of patch = 10* size of sift
     Mat K1 = Mat::zeros(3,3,CV_64FC1);
-    K1.at<double>(0,0) = c.focalLength;
+    K1.at<double>(0,0) = c.focalLength; 
     K1.at<double>(1,1) = c.focalLength;
     K1.at<double>(0,2) = s->Sift.size*5; 
     K1.at<double>(1,2) = s->Sift.size*5; 
@@ -624,35 +624,51 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // [C2 Intrinsic] - end
     // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
+    cout << "H is " << H << endl;
 
-    H.at<double>(0,0) = 1;
-    H.at<double>(0,1) = -0.373383055017823;
-    H.at<double>(0,2) = 0.0085315077195105;
-    H.at<double>(1,0) = 0;
-    H.at<double>(1,1) = 0.9748836410988672;
-    H.at<double>(1,2) = -0.01861046434370905;
-    H.at<double>(2,0) = 0;
-    H.at<double>(2,1) = -0.001866915275089115;
-    H.at<double>(2,2) = 1.000042657538598;
+    // H.at<double>(0,0) = 1;
+    // H.at<double>(0,1) = -0.373383055017823;
+    // H.at<double>(0,2) = 0.0085315077195105;
+    // H.at<double>(1,0) = 0;
+    // H.at<double>(1,1) = 0.9748836410988672;
+    // H.at<double>(1,2) = -0.01861046434370905;
+    // H.at<double>(2,0) = 0;
+    // H.at<double>(2,1) = -0.001866915275089115;
+    // H.at<double>(2,2) = 1.000042657538598;
 
-    // Mat corner1 = Mat(3,1,CV_64FC1);
-    // corner1 = H * [1,1,1];
-    
+    Mat corners = Mat::zeros(2,4,CV_64FC1);
 
-    // Mat corner2 = Mat(3,1,CV_64FC1);
-    // corner2.row(0)=1;
-    // corner2.row(1)=size;
-    // corner2.row(2)=1;
+    Mat corner_point = Mat(3,1,CV_64FC1);
+    Mat temp = Mat(3,1,CV_64FC1);
+    corner_point.row(0)=1;
+    corner_point.row(1)=1;
+    corner_point.row(2)=1;
+    temp = H * corner_point;
+    corners.col(0).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
+    corners.col(0).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    // Mat corner3 = Mat(3,1,CV_64FC1);
-    // corner3.row(0)=size;
-    // corner3.row(1)=1;
-    // corner3.row(2)=1;
+    corner_point.row(0)=1;
+    corner_point.row(1)=size;
+    corner_point.row(2)=1;
+    temp = H * corner_point;
+    corners.col(1).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
+    corners.col(1).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    // Mat corner4 = Mat(3,1,CV_64FC1);
-    // corner4.row(0)=size;
-    // corner4.row(1)=size;
-    // corner4.row(2)=1;
+    corner_point.row(0)=size;
+    corner_point.row(1)=1;
+    corner_point.row(2)=1;
+    temp = H * corner_point;
+    corners.col(2).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
+    corners.col(2).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
+
+    corner_point.row(0)=size;
+    corner_point.row(1)=size;
+    corner_point.row(2)=1;
+    temp = H * corner_point;
+    corners.col(3).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
+    corners.col(3).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
+
+    cout << "corners are here " << corners << endl;
 
     // H = K2*H; 
     // H = H*K1.inv();
@@ -734,12 +750,12 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
             // test = point_new.row(0)/point_new.row(2);
             // u_coord = round(point_new.at<double>(0));
             // v_coord = round(point_new.at<double>(1));
-            u_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
+            u_coord = round( point_new.at<double>(0)/point_new.at<double>(2));
             // cout << "u_coord=" << u_coord << endl;
-            v_coord = round( point_new.at<double>(0)/point_new.at<double>(2));
+            v_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
             // cout << "v_coord=" << v_coord << endl;
 
-            warp.at<Vec3b>(y,x)= cropped.at<Vec3b>(v_coord,u_coord);
+            warp.at<Vec3b>(y,x)= cropped.at<Vec3b>(u_coord,v_coord);
             // cv::waitKey();
         }
     }
@@ -757,7 +773,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // resizeWindow("Original",400,400);
     imshow("Original",cropped);
     imshow("Warped",warp);
-    cv::waitKey();
+    cv::waitKey(1000);
     
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
