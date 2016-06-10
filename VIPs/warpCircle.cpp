@@ -489,7 +489,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     K1.at<double>(1,1) = 400;
     K1.at<double>(0,2) = 200; 
     K1.at<double>(1,2) = 200; 
-    K1.at<double>(2,2) = 0;
+    K1.at<double>(2,2) = 1;
     cout << "K1 thingy " << K1 << endl;
 
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
@@ -497,7 +497,7 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3]){
     K2.at<double>(1,1) = 400;
     K2.at<double>(0,2) = 200; 
     K2.at<double>(1,2) = 200; 
-    K2.at<double>(2,2) = 0;
+    K2.at<double>(2,2) = 1;
 
     Mat f = Mat::zeros(3,1,CV_64FC1);
     f.at<double>(0,2) = 400;
@@ -716,6 +716,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
             warp.at<Vec3b>(i,j)= image.at<Vec3b>(u_coord,v_coord);
         }
     }
+
 cout << "end" << endl;
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
