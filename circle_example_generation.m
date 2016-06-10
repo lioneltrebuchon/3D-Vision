@@ -118,23 +118,68 @@ for i=1:1:400
         point_new = inv(H) * point;
         u_coord = round(point_new(1)/point_new(3));
         v_coord = round(point_new(2)/point_new(3));
-        if((u_coord > 2 && u_coord < maxX-1) && (v_coord > 2 && v_coord < maxY-1))
-            
-            % Applying Gaussian blur following: http://stackoverflow.com/questions/20746172/blur-an-image-using-3x3-gaussian-kernel
-            % For more pixels: http://homepages.inf.ed.ac.uk/rbf/HIPR2/gsmooth.htm
-            % But what we need is actually bilinear interpolation.
-        image_unwarped(i,j) = 1/16*image_final(u_coord-1,v_coord-1)+...
-        1/8*image_final(u_coord,v_coord-1)+...
-        1/16*image_final(u_coord+1,v_coord-1)+...
-        1/8*image_final(u_coord-1,v_coord)+...
-        1/4*image_final(u_coord,v_coord)+...
-    1/8*image_final(u_coord+1,v_coord)+...
-    1/16*image_final(u_coord-1,v_coord+1)+...
-    1/8*image_final(u_coord,v_coord+1)+...
-    1/16*image_final(u_coord+1,v_coord+1);
-        end
-        
+        image_unwarped(i,j) = image_final(u_coord,v_coord);
     end
 end
 figure(4)
+imshow(image_unwarped);
+
+
+%% WARPING A COLOR IMAGE
+
+clear color_warped;
+color_original = imread('color_circle.jpg');
+
+theta = 50;
+% R = [cosd(theta) -sind(theta) 0;
+%      sind(theta) cosd(theta)  0;
+%      0          0           1];
+
+R = [1 0 0;
+    0 cosd(theta) -sind(theta);
+    0 sind(theta) cosd(theta)];
+
+T = [-200;-200;400];
+
+K = [400 0 200;
+     0 400 200;
+     0 0 1];
+H = K*[R,T];
+
+
+for i=1:1:400
+    for j=1:1:400
+        z = 0;
+        point = [i;j;z;1];
+        point_new = H * point;
+        u_coord = round(point_new(1)/point_new(3));
+        v_coord = round(point_new(2)/point_new(3));
+        %if((u_coord > 0 && u_coord < 400) && (v_coord > 0 && v_coord < 400))
+        color_warped(u_coord,v_coord,:) = color_original(i,j,:);
+        %end
+        
+    end
+end
+figure(2)
+imshow(color_warped);
+imwrite(color_warped,'color_warped.jpeg');
+            
+
+% unwarp of color_circle
+clear image_unwarped;
+
+H = [1, -0.373383055017823, 0.0085315077195105;
+ 0, 0.9748836410988672, -0.01861046434370905;
+ 0, -0.001866915275089115, 1.000042657538598];
+
+for i=1:1:400
+    for j=1:1:400
+        point = [i;j;1];
+        point_new = inv(H) * point;
+        u_coord = round(point_new(1)/point_new(3));
+        v_coord = round(point_new(2)/point_new(3));
+        image_unwarped(i,j,:) = color_warped(u_coord,v_coord,:);
+    end
+end
+figure(3)
 imshow(image_unwarped);
