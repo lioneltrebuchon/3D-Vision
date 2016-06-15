@@ -411,6 +411,10 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     for (int i = 0; i < 3; i++){
             s->translation[i] = t.at<double>(i,0);
         }   
+
+    cout << "camera C1 center = " << C1 << endl;
+    cout << "camera C2 center = " << C2 << endl;
+
 }
 
 // TODO: I can't math D:
@@ -563,7 +567,8 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], double 
 
 
 cout << "factor d = " << d_v << endl;
-cout << "normal = " << normal_v1 << endl;
+cout << "normal in W = " << n_W << endl;
+cout << "normal1 = " << normal_v1 << endl;
 // cout << "R_2_to_W = " << R_W_to_2 << endl;
 // cout << "factor R_W_to_1 = " << R_W_to_1 << endl;
 // cout << "factor R_1_to_2 = " << R_1_to_2 << endl;
@@ -754,7 +759,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
 
 // MANUAL IMPLEMENTATION
-    // if (minY > 0 && minX > 0) {
+    if (VIP_point_x-size > 0 && VIP_point_y-size > 0) {
     // int sizes[3] = {height, width, 3};
         int height = cropped.rows;
         int width = cropped.cols;
@@ -814,7 +819,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     warp.release();
     image.release();
-    // }
+    }
 }
 
 Mat MakeRotationMatrix(sparseModelPoint smp) {
