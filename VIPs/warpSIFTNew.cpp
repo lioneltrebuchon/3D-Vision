@@ -471,6 +471,9 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     }
 
     //cout << "Rotation: " << rot << "\n";
+    cout << "rotation R_W_to_1 = " << R_W_to_1 << endl;
+    cout << "rotation R_W_to_2 = " << R_W_to_2 << endl;
+    cout << "rotation R_1_to_2 = " << R_1_to_2 << endl;
     
 }
 
@@ -481,18 +484,18 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], double 
     Mat K1 = Mat::zeros(3,3,CV_64FC1);
     K1.at<double>(0,0) = c.focalLength; 
     K1.at<double>(1,1) = c.focalLength;
-    K1.at<double>(0,2) = s->Sift.size*5; 
-    K1.at<double>(1,2) = s->Sift.size*5; 
+    K1.at<double>(0,2) = 3024/2; //s->Sift.size*5; 
+    K1.at<double>(1,2) = 4032/2; //s->Sift.size*5; 
     K1.at<double>(2,2) = 1;
-    cout << "K1 thingy " << K1 << endl;
+    // cout << "K1 thingy " << K1 << endl;
 
     Mat K2 = Mat::zeros(3,3,CV_64FC1);
     K2.at<double>(0,0) = 1;
     K2.at<double>(1,1) = 1;
-    K2.at<double>(0,2) = s->Sift.size*5; 
-    K2.at<double>(1,2) = s->Sift.size*5; 
+    K2.at<double>(0,2) = s->Sift.size*10; 
+    K2.at<double>(1,2) = s->Sift.size*10; 
     K2.at<double>(2,2) = 1;
-    cout << "K2 thingy " << K2 << endl;
+    // cout << "K2 thingy " << K2 << endl;
 
 
     Mat f = Mat::zeros(3,1,CV_64FC1);
@@ -562,10 +565,12 @@ void computeHomography(Camera c, sparseSiftFeature *s, double normal[3], double 
 cout << "factor d = " << d_v << endl;
 cout << "normal = " << normal_v1 << endl;
 // cout << "R_2_to_W = " << R_W_to_2 << endl;
-cout << "factor R_1_to_W = " << R_W_to_1 << endl;
-cout << "factor R_1_to_2 = " << R_1_to_2 << endl;
+// cout << "factor R_W_to_1 = " << R_W_to_1 << endl;
+// cout << "factor R_1_to_2 = " << R_1_to_2 << endl;
 cout << "factor K1 = " << K1 << endl;
 cout << "factor K2 = " << K2 << endl;
+cout << "trans W = " << T_W << endl;
+cout << "trans 1 = " << trans_1 << endl;
 
     Mat H = K2*(R_1_to_2 + R_1_to_2 * trans_1 * (normal_v1).t()/d_v)*K1.inv();
     // cout << "t " << t <<endl;
@@ -592,9 +597,10 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     cout<<">Reading Img "<<imageName<<endl;
     // [Image] - Crop the image to the SIFT patch (coordinate system from upper left corner)
     int w = image.cols;
+    // cout << "image at INSANITY " << image.at<Vec3b>(3000,15000) << endl;
     int h = image.rows;
-    int x = s->Sift.point[0] - size/2;
-    int y = s->Sift.point[1] - size/2;
+    int x = s->Sift.point[0] - size;
+    int y = s->Sift.point[1] - size;
     if (x < 0) {x = 0;}
     if (x+size >= w) {x = w - size - 1;}
     if (x < 0) {x = 0;size = w-1;}
@@ -602,7 +608,8 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     if (y+size >= h) {y = h - size - 1;}
     if (y < 0) {y = 0;}
     // Mat cropped(size,size,image.type());
-    cropped = image(Rect(x, y, size, size)).clone();
+    cropped = image(Rect(x, y, size*2, size*2)).clone();
+    cout << image.size() << endl;
 
     // [C1 Intrinsics] - changing them (Why ??? )
     // Mat K1 = Mat::zeros(3,3,CV_64FC1);
@@ -624,7 +631,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // [C2 Intrinsic] - end
     // [Homography] - correct with new camera intrinsics
     Mat H = Mat(3,3,CV_64FC1,s->H);
-    cout << "H is " << H << endl;
+    // cout << "H is " << H << endl;
 
     // H.at<double>(0,0) = 1;
     // H.at<double>(0,1) = -0.373383055017823;
@@ -640,35 +647,41 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
     Mat corner_point = Mat(3,1,CV_64FC1);
     Mat temp = Mat(3,1,CV_64FC1);
-    corner_point.row(0)=1;
-    corner_point.row(1)=1;
+    corner_point.row(0)=x;
+    corner_point.row(1)=y;
     corner_point.row(2)=1;
     temp = H * corner_point;
     corners.col(0).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
     corners.col(0).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    corner_point.row(0)=1;
-    corner_point.row(1)=size;
+    corner_point.row(0)=x;
+    corner_point.row(1)=y+size;
     corner_point.row(2)=1;
     temp = H * corner_point;
     corners.col(1).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
     corners.col(1).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    corner_point.row(0)=size;
-    corner_point.row(1)=1;
+    corner_point.row(0)=x+size;
+    corner_point.row(1)=y;
     corner_point.row(2)=1;
     temp = H * corner_point;
     corners.col(2).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
     corners.col(2).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    corner_point.row(0)=size;
-    corner_point.row(1)=size;
+    corner_point.row(0)=x+size;
+    corner_point.row(1)=y+size; 
     corner_point.row(2)=1;
     temp = H * corner_point;
     corners.col(3).row(0) = round(temp.at<double>(0)/temp.at<double>(2));
     corners.col(3).row(1) = round(temp.at<double>(1)/temp.at<double>(2));
 
-    cout << "corners are here " << corners << endl;
+    // cout << "corners are here " << corners << endl;
+
+    double minX, minY, maxX, maxY;
+    minMaxLoc(corners.row(0),&minX, &maxX);
+    minMaxLoc(corners.row(1),&minY, &maxY);
+
+    // cout << "minx and maxx: " << minX << " " << maxX << "Ys: " << minY << " " << maxY << endl;
 
     // H = K2*H; 
     // H = H*K1.inv();
@@ -724,59 +737,84 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // H = invH.clone(); // the sacred line
     // END OF HOMOGRAPHYCORNERS FIX!!!
 
+    Mat SIFT_point = Mat(3,1,CV_64FC1);
+    SIFT_point.row(0)=s->Sift.point[0];
+    SIFT_point.row(1)=s->Sift.point[1];
+    SIFT_point.row(2)=1;
+
+    Mat VIP_point;
+    int VIP_point_x, VIP_point_y;
+    VIP_point = H * SIFT_point;
+    VIP_point_x = round( VIP_point.at<double>(0)/VIP_point.at<double>(2));
+    VIP_point_y = round( VIP_point.at<double>(1)/VIP_point.at<double>(2));
+
+    cout << "!!!!!!!!!!!!!!!! VIP point location: " << VIP_point_x << "    " << VIP_point_y <<endl;
+
+
+
 
 // MANUAL IMPLEMENTATION
+    // if (minY > 0 && minX > 0) {
     // int sizes[3] = {height, width, 3};
-    int height = cropped.rows;
-    int width = cropped.cols;
-    cout << "height " << height << " width " << width << endl;
-    Mat warp(height, width, CV_8UC3, Scalar::all(0));
-    Mat point = Mat(3,1,CV_64FC1);
-    Mat point_new;
-    int u_coord;
-    int v_coord;
-    double test = 0;
+        int height = cropped.rows;
+        int width = cropped.cols;
+        // cout << "height " << height << " width " << width << endl;
+        Mat warp(VIP_point_y+size, VIP_point_x+size, CV_8UC3, Scalar::all(0));
+        Mat point = Mat(3,1,CV_64FC1);
+        Mat point_new;
+        int u_coord;
+        int v_coord;
+        double test = 0;
 
-    cout << "Size of warp" << warp.size() << endl;
-    cout << "Type of warp" << warp.type() << endl;
+        // cout << "Size of warp" << warp.size() << endl;
+        // cout << "Type of warp" << warp.type() << endl;
 
-    for (int y=0; y<height; y++){
-        for (int x=0; x< width; x++){
-            point.row(0)=y;//TODO: invert x and y
-            point.row(1)=x;
-            point.row(2)=1;
-            point_new = H.inv() * point;
-            // cout << point_new << endl;
-            // test = point_new.row(0)/point_new.row(2);
-            // u_coord = round(point_new.at<double>(0));
-            // v_coord = round(point_new.at<double>(1));
-            u_coord = round( point_new.at<double>(0)/point_new.at<double>(2));
-            // cout << "u_coord=" << u_coord << endl;
-            v_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
-            // cout << "v_coord=" << v_coord << endl;
+        for (int y = (VIP_point_y-size); y < (VIP_point_y+size); y++){
+            for (int x = (VIP_point_x-size); x < (VIP_point_x+size); x++){
+                point.row(0)=x;//TODO: invert x and y
+                // cout << "x_current = " << x << " ,y_current = " << y <<endl;
+                point.row(1)=y;
+                point.row(2)=1;
+                point_new = H.inv() * point;
+                // cout << point_new << endl;
+                u_coord = round( point_new.at<double>(0)/point_new.at<double>(2));
+                // cout << "u_coord=" << u_coord << "     ";
+                v_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
+                // cout << "v_coord=" << v_coord << endl;
 
-            warp.at<Vec3b>(y,x)= cropped.at<Vec3b>(u_coord,v_coord);
-            // cv::waitKey();
+                warp.at<Vec3b>(y,x)= image.at<Vec3b>(v_coord,u_coord);
+                // cv::waitKey();
+            }
         }
-    }
-    cout << "end" << endl;
+
+        cout << "----------------------------------------------------END" << endl;
     // warpPerspective(flippedCrop, warp, H, warp.size());
     // imwrite(patchName + "VIPFlip.jpg", warp);
 
     // warpPerspective(cropped, warp, H, warp.size(),WARP_INVERSE_MAP);  // needs the inverse of the homography! (TODO: add additional parameters ???)
     // warpAffine()  // test 
     /// Displaying images in window
-    namedWindow("Warped",WINDOW_AUTOSIZE);
-    // resizeWindow("Warped",400,400);
-    namedWindow("Original",WINDOW_AUTOSIZE);
-    moveWindow("Original",400,100);
+
+        Mat cropped_warp = warp(Rect(VIP_point_x-size, VIP_point_y-size, size, size));
+
+
+        namedWindow("Warped");
+        resizeWindow("Warped",400,400);
+        namedWindow("Original");
+        moveWindow("Original",400,100);
     // resizeWindow("Original",400,400);
-    imshow("Original",cropped);
-    imshow("Warped",warp);
-    cv::waitKey(1000);
-    
+        imshow("Original",cropped);
+        imshow("Warped",cropped_warp);
+        cv::waitKey(0);
+
+
+
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
     imwrite(patchName + "VIP.jpg", warp);
+
+    warp.release();
+    image.release();
+    // }
 }
 
 Mat MakeRotationMatrix(sparseModelPoint smp) {
