@@ -109,7 +109,9 @@ int main(int argc, char **argv)
     ifstream denseStream;
     ifstream sparseStream;
     string siftFolder;
-    int maxPoints = 1024;
+    int maxPoints = 99000;
+    int allPoints = 0;
+    int skip = 0;
     char line[1024];
 
     // Read in command line arguments and open the file streams
@@ -133,7 +135,7 @@ int main(int argc, char **argv)
             siftFolder = argv[++i];
         } 
         else if (!strcmp(argv[i],"-n")){
-            maxPoints = stoi(argv[++i]);
+            allPoints = stoi(argv[++i]);
         }
         else {                                  
             cerr << "Unrecognized option.\n";
@@ -141,6 +143,7 @@ int main(int argc, char **argv)
         }
         i++;
     }
+    skip = allPoints/maxPoints;
 
     // Store cameras and sift features
     // Creates a vector of Camera objects. Each Camera object
@@ -191,6 +194,16 @@ int main(int argc, char **argv)
         check=0;
     }
     while(numPoints < maxPoints && check) {
+        int s = 0;
+        while (s < skip){
+            if(!denseStream.getline(line, 1028)){
+                check=0;
+            }
+            s++;
+        }
+        if (!check){
+            break;
+        }
         istringstream ss(line);
         for (int i = 0; i < dim; i++){
             ss >> densePts[numPoints][i];

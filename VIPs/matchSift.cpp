@@ -84,7 +84,7 @@ int main(int argc, char **argv)
     ifstream denseStream;
     string smallSiftFolder;
     string largeSiftFolder;
-    int maxPoints = 1024;
+    int maxPoints = 99000;
     char line[1024];
 
     // Read in command line arguments and open the file streams
@@ -229,6 +229,8 @@ int main(int argc, char **argv)
     delete [] dists;
     delete siftTree;
     delete VIPSiftTree;
+    annDeallocPts(SIFTS);
+    annDeallocPts(VIPSIFTS)
     annClose();
 }
 
