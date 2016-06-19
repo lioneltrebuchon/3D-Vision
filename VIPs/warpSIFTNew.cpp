@@ -401,7 +401,7 @@ void computeTranslation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     point_in_C1 = R_W_to_1 * point_global;
     double z_point = point_in_C1.at<double>(2,0);
     double s_w = s->Sift.size * z_point / c.focalLength;
-    double z_vip = s_w / s->Sift.size;
+    double z_vip = (s_w / s->Sift.size);
     for (int i = 0; i < 3; i++){
         c2[i] = smp.point[i] + smp.normal[i]*z_vip;
     }  
@@ -452,7 +452,11 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     
     Mat vec1;
     Mat vec2;
-    Mat X = Mat(3,1,CV_64FC1,smp.normal);
+    double nnormal[3];
+    for (int i =0; i < 3; i++){
+        nnormal[i] = -smp.normal[i];
+    }
+    Mat X = Mat(3,1,CV_64FC1,nnormal);
     Mat up = Mat::zeros(3,1,CV_64FC1);
     up.col(0).row(2) = 1;
     vec1 = X.cross(up);
@@ -799,8 +803,9 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
                 // cout << "u_coord=" << u_coord << "     ";
                 v_coord = round( point_new.at<double>(1)/point_new.at<double>(2));
                 // cout << "v_coord=" << v_coord << endl;
-
-                warp.at<Vec3b>(y,x)= image.at<Vec3b>(v_coord,u_coord);
+                if (u_coord >= 0 && v_coord >= 0 && v_coord < image.rows && u_coord < image.cols){
+                    warp.at<Vec3b>(y,x)= image.at<Vec3b>(v_coord,u_coord);
+                }
                 // cv::waitKey();
             }
         }
@@ -813,7 +818,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
     // warpAffine()  // test 
     /// Displaying images in window
 
-        Mat cropped_warp = warp(Rect(VIP_point_x-size, VIP_point_y-size, size, size));
+        Mat cropped_warp = warp(Rect(VIP_point_x-size, VIP_point_y-size, 2*size, 2*size));
 
 
         namedWindow("Warped");
