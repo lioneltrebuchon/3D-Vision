@@ -109,7 +109,7 @@ int main(int argc, char **argv)
     ifstream denseStream;
     ifstream sparseStream;
     string siftFolder;
-    int maxPoints = 99000;
+    int maxPoints = 250000;
     int allPoints = 0;
     int skip = 0;
     char line[1024];
@@ -833,7 +833,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
 
     imwrite(patchName + ".jpg", cropped); // Image patches look kinda sorta right :/
-    imwrite(patchName + "VIP.jpg", warp);
+    imwrite(patchName + "VIP.jpg", cropped_warp);
 
     warp.release();
     image.release();
