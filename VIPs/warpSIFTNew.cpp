@@ -461,7 +461,7 @@ void computeRotation(Camera c, sparseSiftFeature *s, sparseModelPoint smp){
     up.col(0).row(2) = 1;
     vec1 = X.cross(up);
     vec1 = vec1/norm(vec1);
-    vec2 = vec1.cross(X);
+    vec2 = X.cross(vec1);
     vec2 = vec2/norm(vec2);
 
     Mat R_W_to_2 = Mat::zeros(3,3,CV_64FC1);
@@ -776,7 +776,7 @@ void createVIP(Camera c, string imageName, sparseSiftFeature *s, string patchNam
 
 
 // MANUAL IMPLEMENTATION
-    if (VIP_point_x-size > 0 && VIP_point_y-size > 0) {
+    if (VIP_point_x-size > 0 && VIP_point_y-size > 0 && VIP_point_x+size > 0 && VIP_point_y+size > 0) {
     // int sizes[3] = {height, width, 3};
         int height = cropped.rows;
         int width = cropped.cols;
