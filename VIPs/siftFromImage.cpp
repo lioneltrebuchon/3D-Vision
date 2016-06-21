@@ -1,40 +1,36 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/xfeatures2d.hpp>
+#include <stdio.h>
 #include <stdarg.h>
+#include <iostream>
+#include <fstream> 
+#include <vector>
+#include <math.h>  
 // #include <opencv2/nonfree/features2d.hpp>
 
 using namespace cv;
 using namespace std;
 
-void calcSIFTDescriptor( Mat img, float scl)
-{
+// Need to compile with contrib package, sorry: https://github.com/itseez/opencv_contrib
+// Compile with g++ siftFromImage.cpp -g -I/usr/local/include/opencv -I/usr/local/include -L/usr/local/lib -lopencv_stitching -lopencv_objdetect -lopencv_superres -lopencv_videostab -lopencv_calib3d -lopencv_features2d -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_video -lopencv_photo -lopencv_ml -lopencv_imgproc -lopencv_flann -lopencv_core -lopencv_xfeatures2d
 
-    // double minX, minY, maxX, maxY;
-    // minMaxLoc(corners.row(0),&minX, &maxX);
-    // minMaxLoc(corners.row(1),&minY, &maxY);
-    // double subX = 0;
-    // double subY = 0;
-    // if (minX < 0) {
-    //     subX = minX;
-    // }
-    // if (minY < 0) {
-    //     subY = minY;
-    // }
-    // for (int i = 0; i < corners.cols; i++){
-    //     corners.at<double>(0,i) = corners.at<double>(0,i) - subX;
-    //     corners.at<double>(1,i) = corners.at<double>(1,i) - subY;
-    // }
-    // Mat sortedCorners = corners.clone();
-    // cv::sort(corners, sortedCorners, CV_SORT_EVERY_ROW);
-    // float size = min(sortedCorners.at<double>(0,2) - sortedCorners.at<double>(0,1), 
-    //     sortedCorners.at<double>(1,2) - sortedCorners.at<double>(1,1));
-    // if (size == 0){
-    //     return;
-    // }
-    // Mat square = img(Rect(sortedCorners.at<double>(0,2), sortedCorners.at<double>(1,2), size, size));
-    // Mat graySquare;
+void calcSIFTDescriptor(string filename);
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        cout << "Usage: ./a.out imagefilename.jpg \n";
+        return 0;
+    }
+    calcSIFTDescriptor(argv[1]);
+    return 1;
+}
+
+void calcSIFTDescriptor(string filename)
+{
+    Mat img = imread(filename, CV_LOAD_IMAGE_COLOR);
     float h = img.rows;
     float w = img.cols;
+    float scl = h/10;
     Mat graySquare;
     cvtColor(img, graySquare, CV_RGB2GRAY);
 
@@ -49,6 +45,14 @@ void calcSIFTDescriptor( Mat img, float scl)
 
     Mat img_kps;
 
-    cout << descriptors << "\n";
+    for (int i = 0; i < 128; i++){
+        cout << descriptors.at<float>(i);
+        if (i != 127) {
+            cout <<",";
+        } else {
+            cout <<"\n";
+        }
+    }
+    // cout << descriptors << "\n";
     
 }
